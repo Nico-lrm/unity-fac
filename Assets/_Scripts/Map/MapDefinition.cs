@@ -15,4 +15,15 @@ public class MapDefinition : ScriptableObject
     
     [Tooltip("Les ennemis (si spawn dynamique) apparaissent entre ces lignes")]
     public Vector2Int enemySpawnZoneY = new Vector2Int(7, 9); // Par défaut lignes du haut
+
+
+    public string exportRows()
+    {
+        return string.Join("\n", mapRows);
+    }
+
+    public void importRows(string rows)
+    {
+        mapRows = rows.Split('\n');
+    }
 }
