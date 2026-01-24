@@ -17,6 +17,6 @@ MonoBehaviour:
   unitPrefab: {fileID: 500768842437401557, guid: 1b47fd1f68c7b054f87745e2cd55b88e, type: 3}
   icon: {fileID: 0}
   deploymentCost: 1
-  maxHP: 20
+  maxHP: 16
   attackDamage: 4
-  speed: 5
+  speed: 8

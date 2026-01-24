@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // Définition des types de pièces
 public enum ChessType { King, Queen, Rook, Bishop, Knight, Pawn }
@@ -19,4 +20,11 @@ public class UnitData : ScriptableObject
     public int maxHP = 20;
     public int attackDamage = 4;
     public int speed = 5;
+    
+    [Header("Combat & Portée")]
+    public int minRange = 1;
+    public int maxRange = 1;
+    
+    [Header("Compétences")]
+    public List<SkillData> skills = new List<SkillData>();
 }

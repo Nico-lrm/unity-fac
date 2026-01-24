@@ -8,17 +8,26 @@ public class UnitController : MonoBehaviour
     public UnitData data; 
     public bool isPlayerTeam;
 
-    [Header("Stats")]
+    [Header("Stats Dynamiques")]
     public int currentHP;
     public int currentAP;
     public int maxAP = 6;
-    public int attackCost = 3; 
+    
+    // On garde en mémoire le skill sélectionné (null = Attaque de base)
+    public SkillData selectedSkill; 
 
-    // Accesseurs
-    public string unitName => data != null ? data.unitName : "Unassigned";
+    // Accesseurs rapides
+    public string unitName => data != null ? data.unitName : "Inconnu";
     public int maxHP => data != null ? data.maxHP : 20;
-    public int speed => data != null ? data.speed : 0;
+    public int speed => data != null ? data.speed : 3;
+    
     public int attackDamage => data != null ? data.attackDamage : 0;
+    
+    // Récupère la portée (soit celle du skill, soit celle de l'unité de base)
+    public int GetMinRange() => (selectedSkill != null) ? 0 : (data != null ? data.minRange : 1);
+    public int GetMaxRange() => (selectedSkill != null) ? selectedSkill.range : (data != null ? data.maxRange : 1);
+    public int GetPower() => (selectedSkill != null) ? selectedSkill.power : (data != null ? data.attackDamage : 1);
+    public int GetAPCost() => (selectedSkill != null) ? selectedSkill.apCost : 3; // 3 PA par défaut pour attaque de base
 
     [Header("Visuel & Animation")]
     public Transform damagePopupPrefab;
@@ -29,7 +38,9 @@ public class UnitController : MonoBehaviour
     public Vector2 gridPosition;
     public Dictionary<TileData, int> validMoveTiles = new Dictionary<TileData, int>();
     public bool hasMovedThisTurn = false;
-    private bool isTargetingAttack = false;
+    
+    // État du combat
+    private bool isTargetingMode = false; // Remplace isTargetingAttack
     
     private EnemyAI myAI;
 
@@ -45,7 +56,6 @@ public class UnitController : MonoBehaviour
         isPlayerTeam = isPlayer;
         currentHP = maxHP; 
         
-        // Ajustement des PA selon la classe
         maxAP = 6;
         if(data != null)
         {
@@ -75,36 +85,50 @@ public class UnitController : MonoBehaviour
                 UnitController clickedUnit = hit.collider.GetComponent<UnitController>();
                 TileData clickedTile = hit.collider.GetComponent<TileData>();
 
-                // 1. Mode Attaque
-                if (isTargetingAttack)
+                // --- 1. MODE CIBLAGE (Attaque ou Skill) ---
+                if (isTargetingMode)
                 {
-                    if (clickedUnit != null && !clickedUnit.isPlayerTeam)
+                    if (clickedUnit != null)
                     {
-                        if (Vector3.Distance(transform.position, clickedUnit.transform.position) <= 2.0f)
+                        // Vérification de portée
+                        float dist = Vector3.Distance(transform.position, clickedUnit.transform.position);
+                        // On arrondit car la distance diagonale est ~1.41
+                        int distInt = Mathf.CeilToInt(dist - 0.1f); 
+
+                        // Vérification Min/Max Range
+                        if (distInt >= GetMinRange() && distInt <= GetMaxRange())
                         {
-                            PerformAttack(clickedUnit);
-                            isTargetingAttack = false;
-                            ClearHighlights();
+                            // Vérification Ami/Ennemi selon le type d'action
+                            bool isHeal = selectedSkill != null && selectedSkill.isHeal;
+                            bool validTarget = isHeal ? (clickedUnit.isPlayerTeam == isPlayerTeam) : (clickedUnit.isPlayerTeam != isPlayerTeam);
+
+                            if (validTarget)
+                            {
+                                PerformCombatAction(clickedUnit);
+                                ExitTargetMode();
+                            }
                         }
                     }
                     else if (clickedTile != null) 
                     {
-                        isTargetingAttack = false;
-                        ClearHighlights();
+                        // Clic dans le vide = Annuler
+                        ExitTargetMode();
                     }
                     return;
                 }
 
-                // 2. Sélection de soi-même (Menu)
+                // --- 2. MENU D'ACTION ---
                 if (clickedUnit == this)
                 {
                     if (!hasMovedThisTurn) ShowWalkableTiles();
+                    // On ouvre le menu UI
                     if (UIManager.Instance != null) 
-                        UIManager.Instance.ShowActionMenu(true, () => EnterAttackMode(), null);
+                        UIManager.Instance.ShowActionMenu(true, () => EnterCombatMode(null), null); 
+                        // Note: Pour les skills, il faudra ajouter des boutons dans l'UI qui appellent EnterCombatMode(skill)
                     return;
                 }
 
-                // 3. Déplacement
+                // --- 3. DÉPLACEMENT ---
                 if (!hasMovedThisTurn && clickedTile != null && validMoveTiles.ContainsKey(clickedTile))
                 {
                     StartCoroutine(MoveChessPiece(clickedTile));
@@ -113,24 +137,142 @@ public class UnitController : MonoBehaviour
             }
         }
         
-        // Clic Droit pour annuler
+        // Clic Droit = Annuler
         if (Input.GetMouseButtonDown(1))
         {
-             isTargetingAttack = false;
-             ClearHighlights();
+             ExitTargetMode();
              if (UIManager.Instance != null) UIManager.Instance.CloseAllMenus();
         }
     }
 
-    public void EnterAttackMode()
+    // --- LOGIQUE DE COMBAT ---
+
+    /// <summary>
+    /// Prépare l'unité à agir. Si skill est null, c'est une attaque de base.
+    /// </summary>
+    public void EnterCombatMode(SkillData skill)
     {
-        if (currentAP < attackCost) return;
-        isTargetingAttack = true;
-        ShowAttackRange();
+        selectedSkill = skill;
+        int cost = GetAPCost();
+
+        if (currentAP < cost) 
+        {
+            Debug.Log("Pas assez de PA !");
+            return;
+        }
+
+        isTargetingMode = true;
+        ShowCombatRange(); // Affiche la portée visuelle
         if (UIManager.Instance != null) UIManager.Instance.CloseAllMenus();
     }
 
-    // --- LOGIQUE DE DÉPLACEMENT RESTAURÉE ---
+    void ExitTargetMode()
+    {
+        isTargetingMode = false;
+        selectedSkill = null; // On reset
+        ClearHighlights();
+    }
+
+    public void ShowCombatRange()
+    {
+        ClearHighlights();
+        
+        int minR = GetMinRange();
+        int maxR = GetMaxRange();
+        
+        bool isHeal = selectedSkill != null && selectedSkill.isHeal;
+        Color highlightColor = isHeal ? Color.green : Color.red;
+
+        // On parcourt TOUTES les tuiles de la map (plus sûr que le Raycast pour une grille)
+        foreach(var kvp in MapGenerator.mapGrid)
+        {
+            TileData tile = kvp.Value;
+            Vector2 tilePos = tile.gridPosition;
+
+            // --- CALCUL DE DISTANCE EN "CASES" (Distance de Tchebychev) ---
+            // C'est la distance utilisée aux échecs (le Roi bouge de 1, même en diagonale)
+            int distX = Mathf.Abs((int)tilePos.x - (int)gridPosition.x);
+            int distY = Mathf.Abs((int)tilePos.y - (int)gridPosition.y);
+            int distanceEnCases = Mathf.Max(distX, distY); // On prend le plus grand des deux axes
+
+            // Vérification du Donut
+            if (distanceEnCases >= minR && distanceEnCases <= maxR)
+            {
+                Renderer r = tile.GetComponent<Renderer>();
+                if(r != null) r.material.color = highlightColor;
+            }
+        }
+    }
+
+public void PerformCombatAction(UnitController target)
+    {
+        int cost = GetAPCost();
+        if(currentAP < cost) return;
+        currentAP -= cost;
+
+        // ON CAPTURE LE SKILL MAINTENANT (avant qu'il soit reset)
+        SkillData skillUsed = selectedSkill; 
+
+        // On lance la séquence avec le skill en paramètre
+        StartCoroutine(CombatSequence(target, skillUsed)); 
+        
+        // On peut maintenant reset sans danger
+        // Note : ExitTargetMode() est souvent appelé par le Input click droit, 
+        // ici on veut juste reset l'état interne
+        isTargetingMode = false;
+        selectedSkill = null;
+        ClearHighlights();
+    }
+
+    // Ajoute le paramètre 'skillUsed' ici
+    IEnumerator CombatSequence(UnitController target, SkillData skillUsed)
+    {
+        // 1. Rotation vers la cible
+        Vector3 targetDir = target.transform.position;
+        float turnTime = 0f;
+        while(turnTime < 0.2f) { LookAtTarget(targetDir); turnTime += Time.deltaTime; yield return null; }
+        
+        // ANNONCE
+        if (UIManager.Instance != null)
+        {
+            string attackName = (skillUsed != null) ? skillUsed.skillName : "Attaque";
+            Color textColor = (skillUsed != null && skillUsed.isHeal) ? Color.green : Color.white;
+            UIManager.Instance.ShowAnnouncement(attackName, textColor, 1.5f);
+        }
+
+        // 2. Animation
+        // Si c'est un soin, on peut jouer une anim différente si tu en as une (ex: "DoCast")
+        if (anim != null) anim.SetTrigger("DoAttack"); 
+
+        yield return new WaitForSeconds(0.5f); 
+        
+        // 3. EFFET (On utilise skillUsed, qui n'est pas null !)
+        int power = (skillUsed != null) ? skillUsed.power : attackDamage; // Utilise damage de base si skill null
+        bool isHeal = skillUsed != null && skillUsed.isHeal;
+
+        if (isHeal)
+        {
+            target.Heal(power);
+        }
+        else
+        {
+            target.TakeDamage(power);
+        }
+        
+        yield return new WaitForSeconds(0.5f);
+
+        // Mise à jour de l'UI (PV/PA changés)
+        if (UIManager.Instance != null) 
+        {
+            UIManager.Instance.UpdateStatsPanel(this);   // Update moi (PA)
+            UIManager.Instance.UpdateStatsPanel(target); // Update lui (PV)
+        }
+        
+        CheckEndTurn();
+    }
+
+    // --- MOUVEMENTS (Code précédent restauré/conservé) ---
+    
     public void CalculateChessMoves()
     {
         validMoveTiles.Clear();
@@ -138,35 +280,18 @@ public class UnitController : MonoBehaviour
         if (!MapGenerator.mapGrid.ContainsKey(gridPosition)) return;
 
         TileData startTile = MapGenerator.mapGrid[gridPosition];
-
-        // Vecteurs de direction
         Vector2[] ortho = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
         Vector2[] diags = { new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, 1), new Vector2(-1, -1) };
         Vector2[] knightJumps = { new Vector2(1, 2), new Vector2(2, 1), new Vector2(2, -1), new Vector2(1, -2), new Vector2(-1, -2), new Vector2(-2, -1), new Vector2(-2, 1), new Vector2(-1, 2) };
 
-        // C'est ICI que la magie opère pour chaque pièce
         switch (data.pieceType)
         {
-            case ChessType.King:
-                CheckSlideMoves(startTile, ortho, 1);
-                CheckSlideMoves(startTile, diags, 1);
-                break;
-            case ChessType.Queen:
-                CheckSlideMoves(startTile, ortho, 99);
-                CheckSlideMoves(startTile, diags, 99);
-                break;
-            case ChessType.Rook:
-                CheckSlideMoves(startTile, ortho, 99);
-                break;
-            case ChessType.Bishop:
-                CheckSlideMoves(startTile, diags, 99);
-                break;
-            case ChessType.Knight: // Le Cavalier SAUTE
-                CheckJumpMoves(startTile, knightJumps, 3);
-                break;
-            case ChessType.Pawn:
-                CheckSlideMoves(startTile, ortho, 2); // Le pion bouge un peu moins loin
-                break;
+            case ChessType.King: CheckSlideMoves(startTile, ortho, 1); CheckSlideMoves(startTile, diags, 1); break;
+            case ChessType.Queen: CheckSlideMoves(startTile, ortho, 99); CheckSlideMoves(startTile, diags, 99); break;
+            case ChessType.Rook: CheckSlideMoves(startTile, ortho, 99); break;
+            case ChessType.Bishop: CheckSlideMoves(startTile, diags, 99); break;
+            case ChessType.Knight: CheckJumpMoves(startTile, knightJumps, 3); break;
+            case ChessType.Pawn: CheckSlideMoves(startTile, ortho, 2); break;
         }
     }
 
@@ -179,50 +304,33 @@ public class UnitController : MonoBehaviour
                 Vector2 targetPos = startNode.gridPosition + (dir * i);
                 if (!MapGenerator.mapGrid.ContainsKey(targetPos)) break;
                 TileData tile = MapGenerator.mapGrid[targetPos];
-                
-                // Obstacle ou unité ? On arrête
                 if (!tile.isWalkable || tile.currentUnit != null) break; 
-                // Trop haut ? On arrête
                 if (Mathf.Abs(tile.height - startNode.height) > 1) break;
 
                 int cost = i;
-                if (currentAP >= cost) 
-                { 
-                    if (!validMoveTiles.ContainsKey(tile)) validMoveTiles.Add(tile, cost); 
-                } 
-                else break; 
+                if (currentAP >= cost) { if (!validMoveTiles.ContainsKey(tile)) validMoveTiles.Add(tile, cost); } else break; 
             }
         }
     }
 
-    // Fonction indispensable pour le Cavalier (Knight)
     void CheckJumpMoves(TileData startNode, Vector2[] offsets, int fixedCost)
     {
         if (currentAP < fixedCost) return;
-
         foreach (Vector2 offset in offsets)
         {
             Vector2 targetPos = startNode.gridPosition + offset;
-            
             if (MapGenerator.mapGrid.ContainsKey(targetPos))
             {
                 TileData tile = MapGenerator.mapGrid[targetPos];
-
-                // Le cavalier saute, donc il s'en fiche des obstacles sur le chemin
-                // Il regarde juste la case d'arrivée : est-elle libre et accessible ?
-                if (tile.isWalkable && tile.currentUnit == null)
+                if (tile.isWalkable && tile.currentUnit == null && Mathf.Abs(tile.height - startNode.height) <= 1)
                 {
-                    // On vérifie quand même la hauteur d'arrivée
-                    if (Mathf.Abs(tile.height - startNode.height) <= 1)
-                    {
-                        validMoveTiles.Add(tile, fixedCost);
-                    }
+                    validMoveTiles.Add(tile, fixedCost);
                 }
             }
         }
     }
 
-    // --- ANIMATIONS & DÉPLACEMENTS ---
+    // --- ANIMATIONS & UTILITAIRES ---
 
     void LookAtTarget(Vector3 targetPoint)
     {
@@ -245,7 +353,7 @@ public class UnitController : MonoBehaviour
             MapGenerator.mapGrid[gridPosition].currentUnit = null;
 
         Vector3 startPos = transform.position;
-        Vector3 endPos = new Vector3(targetTile.gridPosition.x, targetTile.height + 1.5f, targetTile.gridPosition.y);
+        Vector3 endPos = new Vector3(targetTile.gridPosition.x, targetTile.height + 0.5f, targetTile.gridPosition.y);
         
         if (anim != null) anim.SetTrigger("DoWalk");
 
@@ -265,41 +373,44 @@ public class UnitController : MonoBehaviour
         targetTile.currentUnit = this;
         currentAP -= cost;
         hasMovedThisTurn = true;
-
+        
+        UIManager.Instance.UpdateStatsPanel(this);
         if (isPlayerTeam && UIManager.Instance != null) UIManager.Instance.UpdateUI(this);
     }
 
-    public void PerformAttack(UnitController target)
+    // Ajoute cette fonction pour gérer le soin
+    public void Heal(int amount)
     {
-        if(currentAP < attackCost) return;
-        currentAP -= attackCost;
-        StartCoroutine(AttackSequence(target));
-    }
-
-    IEnumerator AttackSequence(UnitController target)
-    {
-        Vector3 targetDir = target.transform.position;
-        float turnTime = 0f;
-        while(turnTime < 0.2f) 
-        { 
-            LookAtTarget(targetDir); 
-            turnTime += Time.deltaTime; 
-            yield return null; 
+        currentHP = Mathf.Min(currentHP + amount, maxHP);
+        if (damagePopupPrefab != null) { 
+            Transform p = Instantiate(damagePopupPrefab, transform.position + Vector3.up * 3f, Quaternion.identity); 
+            // Tu devras adapter ton DamagePopup pour qu'il prenne une couleur verte
+            p.GetComponent<DamagePopup>().Setup(amount, false); 
         }
         
-        if (anim != null) anim.SetTrigger("DoAttack");
-
-        yield return new WaitForSeconds(0.5f);
-        
-        target.TakeDamage(attackDamage);
-        
-        yield return new WaitForSeconds(0.5f);
-
-        if (isPlayerTeam && UIManager.Instance != null) UIManager.Instance.UpdateUI(this);
-        CheckEndTurn();
+        UIManager.Instance.UpdateStatsPanel(this);
     }
 
-    // --- OUTILS & FIN DE TOUR ---
+    public void TakeDamage(int amount)
+    {
+        currentHP -= amount;
+        if (damagePopupPrefab != null) { 
+            Transform p = Instantiate(damagePopupPrefab, transform.position + Vector3.up * 3f, Quaternion.identity); 
+            p.GetComponent<DamagePopup>().Setup(amount, false); 
+        }
+        if (currentHP > 0 && anim != null) anim.SetTrigger("DoHit");
+        if (currentHP <= 0) StartCoroutine(DieSequence());
+        UIManager.Instance.UpdateStatsPanel(this);
+    }
+
+    IEnumerator DieSequence()
+    {
+        if (anim != null) anim.SetTrigger("DoDie");
+        yield return new WaitForSeconds(1.5f);
+        if (MapGenerator.mapGrid.ContainsKey(gridPosition)) MapGenerator.mapGrid[gridPosition].currentUnit = null;
+        gameObject.SetActive(false);
+        GameManager.Instance.OnUnitDied(this);
+    }
 
     public void BeginTurn()
     {
@@ -315,29 +426,12 @@ public class UnitController : MonoBehaviour
         else 
         {
             if (myAI != null) myAI.DoTurn();
-            else
-            {
-                Debug.LogError($"🛑 ERREUR : {name} n'a pas d'EnemyAI ! Fin de tour forcée.");
-                GameManager.Instance.EndTurn();
-            }
+            else { Debug.LogError($"🛑 ERREUR : {name} n'a pas d'EnemyAI !"); GameManager.Instance.EndTurn(); }
         }
+        
+        UIManager.Instance.UpdateStatsPanel(this);
     }
 
-    public void TakeDamage(int amount)
-    {
-        currentHP -= amount;
-        if (damagePopupPrefab != null) { Transform p = Instantiate(damagePopupPrefab, transform.position + Vector3.up * 3f, Quaternion.identity); p.GetComponent<DamagePopup>().Setup(amount, false); }
-        if (currentHP <= 0) Die();
-    }
-
-    void Die()
-    {
-        if (MapGenerator.mapGrid.ContainsKey(gridPosition)) MapGenerator.mapGrid[gridPosition].currentUnit = null;
-        gameObject.SetActive(false);
-        GameManager.Instance.OnUnitDied(this);
-    }
-    
-    // --- GESTION AFFICHAGE ---
     public void ShowWalkableTiles()
     {
         ClearHighlights();
@@ -348,16 +442,6 @@ public class UnitController : MonoBehaviour
             if (r != null) r.material.color = Color.cyan;
         }
     }
-    
-    public void ShowAttackRange()
-    {
-        ClearHighlights();
-        Collider[] hits = Physics.OverlapSphere(transform.position, 1.5f);
-        foreach(var hit in hits) {
-            TileData t = hit.GetComponent<TileData>();
-            if(t != null) t.GetComponent<Renderer>().material.color = Color.red;
-        }
-    }
 
     public void ClearHighlights()
     {
@@ -366,7 +450,6 @@ public class UnitController : MonoBehaviour
             Renderer r = tile.GetComponent<Renderer>();
             if (r != null)
             {
-                // Remet le bon matériau selon la hauteur
                 int type = tile.height;
                 if (MapGenerator.Instance.terrainMaterials != null && type >= 0 && type < MapGenerator.Instance.terrainMaterials.Length)
                 {

@@ -1,114 +1,182 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections.Generic;
 
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance;
 
-    [Header("Panel Stats")]
-    public GameObject statsPanel;
+    [Header("Menus")]
+    public GameObject actionMenu; // Le panneau avec Attaquer, Skills, Attendre
+    public GameObject skillMenu;  // Le panneau qui contient la liste des sorts
+
+    [Header("Boutons Action Menu")]
+    public Button attackBtn;
+    public Button skillBtn;
+    public Button endTurnBtn;
+    
+    [Header("Stat Panel")]
+    public GameObject statPanel;
     public TextMeshProUGUI nameText;
-    public TextMeshProUGUI statsText;
+    public TextMeshProUGUI hpText;
+    public TextMeshProUGUI apText;
 
-    [Header("Menu Actions")]
-    public GameObject actionMenuPanel;
-    public Button attackButton;
-    public Button skillButton;
-    public Button endTurnButton;
+    [Header("Système de Skills")]
+    public Transform skillListContainer; // L'endroit où on fait spawn les boutons (Content d'un ScrollView ou Panel)
+    public GameObject skillButtonPrefab; // Le modèle de bouton à cloner
 
-    [Header("Menu Skills")]
-    public GameObject skillMenuPanel;
-    public GameObject skillButtonPrefab; // Glisse le prefab ici
-    public Transform skillListContainer; // C'est le panel "SkillMenu" lui-même
+    [Header("Bannière Annonce")]
+    public GameObject announcementPanel;
+    public TextMeshProUGUI announcementText;
+    
+    // Unité actuellement sélectionnée pour l'UI
+    private UnitController currentUIUnit;
 
-    [Header("Info Cible")]
-    public GameObject targetInfoPanel;
-    public TextMeshProUGUI targetInfoText;
-
-    void Awake() { Instance = this; }
-
-    void Start()
+    void Awake()
     {
-        endTurnButton.onClick.AddListener(() => GameManager.Instance.EndTurn());
-        CloseAllMenus();
+        Instance = this;
+        // On cache tout au début
+        if(actionMenu != null) actionMenu.SetActive(false);
+        if(skillMenu != null) skillMenu.SetActive(false);
+        if(announcementPanel != null) announcementPanel.SetActive(false);
     }
 
-    public void UpdateUI(UnitController activeUnit)
+    // Appelé quand on clique sur un perso qui peut jouer
+    public void ShowActionMenu(bool show, System.Action onAttack, System.Action onWait)
     {
-        statsPanel.SetActive(true);
-        if (activeUnit.isPlayerTeam)
+        // Si on demande de fermer
+        if (!show) { CloseAllMenus(); return; }
+
+        // Si on demande d'ouvrir
+        if (GameManager.Instance.activeUnit != null)
         {
-            nameText.text = activeUnit.unitName;
-            statsText.text = $"HP: <color=green>{activeUnit.currentHP}/{activeUnit.maxHP}</color>\nAP: <color=#00FFFF>{activeUnit.currentAP}/{activeUnit.maxAP}</color>";
+            currentUIUnit = GameManager.Instance.activeUnit;
+            actionMenu.SetActive(true);
+            
+            // Configuration des boutons
+            
+            // 1. BOUTON ATTAQUE (Base)
+            attackBtn.onClick.RemoveAllListeners();
+            attackBtn.onClick.AddListener(() => {
+                currentUIUnit.EnterCombatMode(null); // Null = Attaque de base
+                // Pas de CloseAllMenus ici, c'est EnterCombatMode qui décidera
+            });
+
+            // 2. BOUTON SKILLS (Oouvre le sous-menu)
+            skillBtn.onClick.RemoveAllListeners();
+            // On vérifie s'il a des sorts
+            if (currentUIUnit.data.skills.Count > 0)
+            {
+                skillBtn.interactable = true;
+                skillBtn.onClick.AddListener(() => OpenSkillMenu());
+            }
+            else
+            {
+                skillBtn.interactable = false; // Grisé si pas de magie
+            }
+
+            // 3. BOUTON ATTENDRE
+            endTurnBtn.onClick.RemoveAllListeners();
+            endTurnBtn.onClick.AddListener(() => {
+                GameManager.Instance.EndTurn();
+                CloseAllMenus();
+            });
+        }
+    }
+    
+    public void UpdateStatsPanel(UnitController unit)
+    {
+        if (unit == null)
+        {
+            statPanel.SetActive(false);
+            return;
+        }
+
+        statPanel.SetActive(true);
+
+        // 1. Nom
+        nameText.text = unit.unitName;
+
+        // 2. PV (Rouge si bas, Blanc sinon)
+        hpText.text = $"HP: {unit.currentHP} / {unit.maxHP}";
+        hpText.color = (unit.currentHP < unit.maxHP * 0.3f) ? Color.red : Color.white;
+
+        // 3. PA (Seulement si c'est le joueur)
+        if (unit.isPlayerTeam)
+        {
+            apText.gameObject.SetActive(true);
+            apText.text = $"PA: {unit.currentAP} / {unit.maxAP}";
         }
         else
         {
-            nameText.text = $"{activeUnit.unitName}";
-            statsText.text = $"HP: <color=red>{activeUnit.currentHP}/{activeUnit.maxHP}</color>";
-            CloseAllMenus();
+            // Pour l'ennemi, on cache les PA (info inutile pour le joueur)
+            apText.gameObject.SetActive(false);
         }
     }
 
-    public void ShowActionMenu(bool show, System.Action onAttack, System.Action onSkill)
+    // --- LOGIQUE DU MENU DES SORTS ---
+    
+    public void OpenSkillMenu()
     {
-        skillMenuPanel.SetActive(false); // On ferme le sous-menu skill si on revient au principal
-        actionMenuPanel.SetActive(show);
-        
-        if (show)
+        actionMenu.SetActive(false); // On cache le menu principal
+        skillMenu.SetActive(true);   // On affiche le menu des sorts
+
+        // 1. Nettoyage de l'ancienne liste
+        foreach (Transform child in skillListContainer)
         {
-            attackButton.onClick.RemoveAllListeners();
-            skillButton.onClick.RemoveAllListeners();
-
-            if(onAttack != null) attackButton.onClick.AddListener(() => onAttack());
-            if(onSkill != null) skillButton.onClick.AddListener(() => onSkill());
+            Destroy(child.gameObject);
         }
-    }
 
-    public void ShowSkillMenu(List<SkillData> skills, System.Action<SkillData> onSkillChosen)
-    {
-        actionMenuPanel.SetActive(false); // On cache le menu principal
-        skillMenuPanel.SetActive(true);
-
-        // Nettoyer les vieux boutons
-        foreach (Transform child in skillListContainer) Destroy(child.gameObject);
-
-        // Créer les nouveaux boutons
-        foreach (var skill in skills)
+        // 2. Création des boutons
+        foreach (SkillData skill in currentUIUnit.data.skills)
         {
             GameObject btnObj = Instantiate(skillButtonPrefab, skillListContainer);
-            btnObj.GetComponentInChildren<TextMeshProUGUI>().text = $"{skill.skillName} ({skill.apCost} AP)";
             
+            // On change le texte du bouton (si tu as TMP dessus)
+            TextMeshProUGUI btnText = btnObj.GetComponentInChildren<TextMeshProUGUI>();
+            if(btnText != null) btnText.text = $"{skill.skillName} ({skill.apCost} PA)";
+
+            // On ajoute le clic
             Button btn = btnObj.GetComponent<Button>();
-            btn.onClick.AddListener(() => {
-                skillMenuPanel.SetActive(false); // On ferme le menu après choix
-                onSkillChosen(skill);
+            btn.onClick.AddListener(() => 
+            {
+                // Quand on clique sur le sort :
+                currentUIUnit.EnterCombatMode(skill);
+                // Le combat mode s'occupe de fermer les menus via UIManager
             });
         }
         
-        // Bouton retour (Optionnel mais conseillé)
-        GameObject backBtn = Instantiate(skillButtonPrefab, skillListContainer);
-        backBtn.GetComponentInChildren<TextMeshProUGUI>().text = "RETOUR";
-        backBtn.GetComponent<Button>().onClick.AddListener(() => {
-            skillMenuPanel.SetActive(false);
-            actionMenuPanel.SetActive(true);
-        });
-    }
-
-    public void ShowTargetInfo(UnitController unit)
-    {
-        if (unit == null) { targetInfoPanel.SetActive(false); return; }
-        targetInfoPanel.SetActive(true);
-        string team = unit.isPlayerTeam ? "Allié" : "Ennemi";
-        string color = unit.isPlayerTeam ? "green" : "red";
-        targetInfoText.text = $"<b>{unit.unitName}</b> ({team})\nHP: <color={color}>{unit.currentHP}/{unit.maxHP}</color>\nDégâts: {unit.attackDamage}";
+        // Ajoute un bouton "Retour" optionnel si tu veux, 
+        // ou gère le clic droit pour fermer.
     }
 
     public void CloseAllMenus()
     {
-        actionMenuPanel.SetActive(false);
-        skillMenuPanel.SetActive(false);
-        targetInfoPanel.SetActive(false);
+        if(actionMenu != null) actionMenu.SetActive(false);
+        if(skillMenu != null) skillMenu.SetActive(false);
+    }
+
+    // --- ANNONCES ---
+    public void ShowAnnouncement(string text, Color color, float duration)
+    {
+        StartCoroutine(AnimateAnnouncement(text, color, duration));
+    }
+
+    IEnumerator AnimateAnnouncement(string text, Color color, float duration)
+    {
+        if(announcementPanel == null) yield break;
+        announcementText.text = text;
+        announcementText.color = color;
+        announcementPanel.SetActive(true);
+        yield return new WaitForSeconds(duration);
+        announcementPanel.SetActive(false);
+    }
+    
+    // Met à jour l'interface (PA/PV) si tu as un panel de stats
+    public void UpdateUI(UnitController unit)
+    {
+        // Ici tu mettras à jour tes barres de vie plus tard
     }
 }

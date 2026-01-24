@@ -20,3 +20,6 @@ MonoBehaviour:
   maxHP: 10
   attackDamage: 5
   speed: 7
+  minRange: 1
+  maxRange: 3
+  skills: []

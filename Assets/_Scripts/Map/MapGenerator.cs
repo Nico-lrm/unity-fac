@@ -197,7 +197,7 @@ public class MapGenerator : MonoBehaviour
                 TileData tile = mapGrid[targetPos];
                 
                 // On téléporte l'ennemi
-                enemy.transform.position = new Vector3(targetPos.x, tile.height + 1.5f, targetPos.y);
+                enemy.transform.position = new Vector3(targetPos.x, tile.height + 0.5f, targetPos.y);
                 
                 // On met à jour la grille
                 enemy.gridPosition = targetPos;

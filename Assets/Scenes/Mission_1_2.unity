@@ -55798,13 +55798,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b477eee29515eea448d4819d6d1b29bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitController
-  data: {fileID: 11400000, guid: 80a648127682cf04d9ce2a745228d901, type: 2}
+  data: {fileID: 11400000, guid: 3a065e2bee99ba54eb2442c4e9ddc8e1, type: 2}
   isPlayerTeam: 0
   currentHP: 0
   currentAP: 0
   maxAP: 4
   attackCost: 3
   damagePopupPrefab: {fileID: 6865636268923470417, guid: 0195c40d20cfb764d800d359a929fbcb, type: 3}
+  rotationSpeed: 10
   gridPosition: {x: 0, y: 0}
   hasMovedThisTurn: 0
 --- !u!136 &1582615665
