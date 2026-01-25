@@ -24,3 +24,7 @@ MonoBehaviour:
   maxRange: 4
   skills:
   - {fileID: 11400000, guid: 3d53ad6c8aa315c4d8daae5121b63563, type: 2}
+  - {fileID: 11400000, guid: 709b553ad0f89614aaa6abb0389863c6, type: 2}
+  attackSound: {fileID: 0}
+  hitVFX: {fileID: 0}
+  attackAnimDelay: 0.3

@@ -13,26 +13,26 @@ public class UnitController : MonoBehaviour
     public int currentAP;
     public int maxAP = 6;
     
-    // On garde en mémoire le skill sélectionné (null = Attaque de base)
+    // Skill sélectionné (null = Attaque de base)
     public SkillData selectedSkill; 
 
-    // Accesseurs rapides
+    // Accesseurs rapides (Pour l'UI et les calculs)
     public string unitName => data != null ? data.unitName : "Inconnu";
     public int maxHP => data != null ? data.maxHP : 20;
     public int speed => data != null ? data.speed : 3;
-    
-    public int attackDamage => data != null ? data.attackDamage : 0;
+    public int attackDamage => data != null ? data.attackDamage : 0; 
     
     // Récupère la portée (soit celle du skill, soit celle de l'unité de base)
     public int GetMinRange() => (selectedSkill != null) ? 0 : (data != null ? data.minRange : 1);
     public int GetMaxRange() => (selectedSkill != null) ? selectedSkill.range : (data != null ? data.maxRange : 1);
     public int GetPower() => (selectedSkill != null) ? selectedSkill.power : (data != null ? data.attackDamage : 1);
-    public int GetAPCost() => (selectedSkill != null) ? selectedSkill.apCost : 3; // 3 PA par défaut pour attaque de base
+    public int GetAPCost() => (selectedSkill != null) ? selectedSkill.apCost : 3;
 
-    [Header("Visuel & Animation")]
+	[Header("Visuel & Animation")]
     public Transform damagePopupPrefab;
+    public Transform firePoint; // <--- AJOUT IMPORTANT : LE BOUT DU FUSIL
     public float rotationSpeed = 10f;
-    private Animator anim; 
+    private Animator anim;
 
     // Logique Grille
     public Vector2 gridPosition;
@@ -40,9 +40,12 @@ public class UnitController : MonoBehaviour
     public bool hasMovedThisTurn = false;
     
     // État du combat
-    private bool isTargetingMode = false; // Remplace isTargetingAttack
+    private bool isTargetingMode = false;
     
     private EnemyAI myAI;
+
+    // Fonction publique pour l'UI (TurnPortrait)
+    public bool IsInTargetMode() { return isTargetingMode; }
 
     void Awake() 
     { 
@@ -50,7 +53,7 @@ public class UnitController : MonoBehaviour
         anim = GetComponentInChildren<Animator>();
     }
 
-    public void Initialize(UnitData unitData, bool isPlayer)
+public void Initialize(UnitData unitData, bool isPlayer)
     {
         data = unitData;
         isPlayerTeam = isPlayer;
@@ -63,20 +66,51 @@ public class UnitController : MonoBehaviour
             if (data.pieceType == ChessType.Pawn) maxAP = 4;
         }
         currentAP = maxAP;
+
+        // --- NOUVEAU : GESTION DE LA COULEUR D'ÉQUIPE ---
+        UpdateTeamColor();
+    }
+
+    void UpdateTeamColor()
+    {
+        // On cherche le Renderer (Le modèle 3D) dans les enfants
+        Renderer r = GetComponentInChildren<Renderer>();
+        if (r != null)
+        {
+            // On définit la couleur : Cyan pour Joueur, Rouge Vif pour Ennemi
+            Color teamColor = isPlayerTeam ? Color.cyan : new Color(1f, 0.2f, 0.2f); // Rouge un peu orangé
+            
+            // On applique la couleur au paramètre "_RimColor" du shader
+            // Note: On utilise material (et pas sharedMaterial) pour créer une instance unique pour ce perso
+            r.material.SetColor("_RimColor", teamColor);
+        }
     }
     
     void Update()
     {
         if (GameManager.Instance.activeUnit == this && isPlayerTeam)
         {
+            // Bloque les clics si on est sur l'UI (Boutons, etc.)
             if (UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
                 return;
+                
             HandleInput();
         }
     }
     
     void HandleInput()
     {
+        // --- 1. RACCOURCIS CLAVIER ---
+        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Ampersand)) EnterCombatMode(null);
+        if (Input.GetKeyDown(KeyCode.Alpha2) && data.skills.Count > 0 && UIManager.Instance != null) UIManager.Instance.OpenSkillMenu();
+        
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (CameraFollow.Instance != null && !CameraFollow.Instance.isLockedOnUnit) CameraFollow.Instance.ResetCameraOnActiveUnit();
+            else { GameManager.Instance.EndTurn(); if (UIManager.Instance != null) UIManager.Instance.CloseAllMenus(); }
+        }
+
+        // --- 2. SOURIS ---
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -85,50 +119,44 @@ public class UnitController : MonoBehaviour
                 UnitController clickedUnit = hit.collider.GetComponent<UnitController>();
                 TileData clickedTile = hit.collider.GetComponent<TileData>();
 
-                // --- 1. MODE CIBLAGE (Attaque ou Skill) ---
+                // MODE CIBLAGE (Attaque ou Skill)
                 if (isTargetingMode)
                 {
                     if (clickedUnit != null)
                     {
-                        // Vérification de portée
-                        float dist = Vector3.Distance(transform.position, clickedUnit.transform.position);
-                        // On arrondit car la distance diagonale est ~1.41
-                        int distInt = Mathf.CeilToInt(dist - 0.1f); 
+                        // --- CALCUL DE DISTANCE (MANHATTAN) ---
+                        int distX = Mathf.Abs((int)clickedUnit.gridPosition.x - (int)gridPosition.x);
+                        int distY = Mathf.Abs((int)clickedUnit.gridPosition.y - (int)gridPosition.y);
+                        int distInt = distX + distY; 
+                        // --------------------------------------
 
-                        // Vérification Min/Max Range
                         if (distInt >= GetMinRange() && distInt <= GetMaxRange())
                         {
-                            // Vérification Ami/Ennemi selon le type d'action
                             bool isHeal = selectedSkill != null && selectedSkill.isHeal;
+                            // Si soin : cible allié. Si attaque : cible ennemi.
                             bool validTarget = isHeal ? (clickedUnit.isPlayerTeam == isPlayerTeam) : (clickedUnit.isPlayerTeam != isPlayerTeam);
 
-                            if (validTarget)
-                            {
-                                PerformCombatAction(clickedUnit);
-                                ExitTargetMode();
-                            }
+                            if (validTarget) PerformCombatAction(clickedUnit);
+                            else if (UIManager.Instance != null) UIManager.Instance.ShowAnnouncement("Cible Invalide", Color.yellow, 1f);
                         }
+                        else if (UIManager.Instance != null) UIManager.Instance.ShowAnnouncement("Hors de Portée", Color.yellow, 1f);
                     }
                     else if (clickedTile != null) 
                     {
-                        // Clic dans le vide = Annuler
-                        ExitTargetMode();
+                        ExitTargetMode(); // Clic dans le vide = Annuler
                     }
                     return;
                 }
 
-                // --- 2. MENU D'ACTION ---
+                // MENU D'ACTION (Clic sur soi-même)
                 if (clickedUnit == this)
                 {
                     if (!hasMovedThisTurn) ShowWalkableTiles();
-                    // On ouvre le menu UI
-                    if (UIManager.Instance != null) 
-                        UIManager.Instance.ShowActionMenu(true, () => EnterCombatMode(null), null); 
-                        // Note: Pour les skills, il faudra ajouter des boutons dans l'UI qui appellent EnterCombatMode(skill)
+                    if (UIManager.Instance != null) UIManager.Instance.ShowActionMenu(true, () => EnterCombatMode(null), null); 
                     return;
                 }
 
-                // --- 3. DÉPLACEMENT ---
+                // DÉPLACEMENT
                 if (!hasMovedThisTurn && clickedTile != null && validMoveTiles.ContainsKey(clickedTile))
                 {
                     StartCoroutine(MoveChessPiece(clickedTile));
@@ -137,7 +165,7 @@ public class UnitController : MonoBehaviour
             }
         }
         
-        // Clic Droit = Annuler
+        // Clic Droit = Annuler / Retour
         if (Input.GetMouseButtonDown(1))
         {
              ExitTargetMode();
@@ -147,9 +175,6 @@ public class UnitController : MonoBehaviour
 
     // --- LOGIQUE DE COMBAT ---
 
-    /// <summary>
-    /// Prépare l'unité à agir. Si skill est null, c'est une attaque de base.
-    /// </summary>
     public void EnterCombatMode(SkillData skill)
     {
         selectedSkill = skill;
@@ -157,19 +182,19 @@ public class UnitController : MonoBehaviour
 
         if (currentAP < cost) 
         {
-            Debug.Log("Pas assez de PA !");
+            if (UIManager.Instance != null) UIManager.Instance.ShowAnnouncement("Pas assez de PA", Color.red, 1f);
             return;
         }
 
         isTargetingMode = true;
-        ShowCombatRange(); // Affiche la portée visuelle
+        ShowCombatRange();
         if (UIManager.Instance != null) UIManager.Instance.CloseAllMenus();
     }
 
     void ExitTargetMode()
     {
         isTargetingMode = false;
-        selectedSkill = null; // On reset
+        selectedSkill = null;
         ClearHighlights();
     }
 
@@ -179,23 +204,19 @@ public class UnitController : MonoBehaviour
         
         int minR = GetMinRange();
         int maxR = GetMaxRange();
-        
         bool isHeal = selectedSkill != null && selectedSkill.isHeal;
         Color highlightColor = isHeal ? Color.green : Color.red;
 
-        // On parcourt TOUTES les tuiles de la map (plus sûr que le Raycast pour une grille)
         foreach(var kvp in MapGenerator.mapGrid)
         {
             TileData tile = kvp.Value;
             Vector2 tilePos = tile.gridPosition;
 
-            // --- CALCUL DE DISTANCE EN "CASES" (Distance de Tchebychev) ---
-            // C'est la distance utilisée aux échecs (le Roi bouge de 1, même en diagonale)
+            // --- CALCUL DE DISTANCE (MANHATTAN pour affichage Losange/Cercle) ---
             int distX = Mathf.Abs((int)tilePos.x - (int)gridPosition.x);
             int distY = Mathf.Abs((int)tilePos.y - (int)gridPosition.y);
-            int distanceEnCases = Mathf.Max(distX, distY); // On prend le plus grand des deux axes
+            int distanceEnCases = distX + distY;
 
-            // Vérification du Donut
             if (distanceEnCases >= minR && distanceEnCases <= maxR)
             {
                 Renderer r = tile.GetComponent<Renderer>();
@@ -204,74 +225,92 @@ public class UnitController : MonoBehaviour
         }
     }
 
-public void PerformCombatAction(UnitController target)
+    public void PerformCombatAction(UnitController target)
     {
         int cost = GetAPCost();
         if(currentAP < cost) return;
         currentAP -= cost;
 
-        // ON CAPTURE LE SKILL MAINTENANT (avant qu'il soit reset)
+        // On capture le skill AVANT de reset
         SkillData skillUsed = selectedSkill; 
 
-        // On lance la séquence avec le skill en paramètre
         StartCoroutine(CombatSequence(target, skillUsed)); 
         
-        // On peut maintenant reset sans danger
-        // Note : ExitTargetMode() est souvent appelé par le Input click droit, 
-        // ici on veut juste reset l'état interne
         isTargetingMode = false;
         selectedSkill = null;
         ClearHighlights();
     }
 
-    // Ajoute le paramètre 'skillUsed' ici
-    IEnumerator CombatSequence(UnitController target, SkillData skillUsed)
+   IEnumerator CombatSequence(UnitController target, SkillData skillUsed)
     {
         // 1. Rotation vers la cible
         Vector3 targetDir = target.transform.position;
         float turnTime = 0f;
         while(turnTime < 0.2f) { LookAtTarget(targetDir); turnTime += Time.deltaTime; yield return null; }
         
-        // ANNONCE
+        // UI Annonce
         if (UIManager.Instance != null)
         {
             string attackName = (skillUsed != null) ? skillUsed.skillName : "Attaque";
             Color textColor = (skillUsed != null && skillUsed.isHeal) ? Color.green : Color.white;
-            UIManager.Instance.ShowAnnouncement(attackName, textColor, 1.5f);
+            UIManager.Instance.ShowAnnouncement(attackName, textColor, 1.0f);
         }
 
-        // 2. Animation
-        // Si c'est un soin, on peut jouer une anim différente si tu en as une (ex: "DoCast")
-        if (anim != null) anim.SetTrigger("DoAttack"); 
+        // 2. LANCER L'ANIMATION
+        if (anim != null) anim.SetTrigger("DoAttack");
 
-        yield return new WaitForSeconds(0.5f); 
+        // --- C'EST ICI QUE LA MAGIE OPÈRE ---
+        // On calcule combien de temps on doit attendre pour que l'anim soit au bon moment
+        float delay = (skillUsed != null) ? skillUsed.castDelay : (data != null ? data.attackAnimDelay : 0.3f);
         
-        // 3. EFFET (On utilise skillUsed, qui n'est pas null !)
-        int power = (skillUsed != null) ? skillUsed.power : attackDamage; // Utilise damage de base si skill null
+        // On attend que le bras soit levé / l'épée soit en bas
+        yield return new WaitForSeconds(delay);
+        // ------------------------------------
+
+        // 3. SON & VFX (Le Laser part MAINTENANT, synchro avec l'anim)
+        AudioClip clipToPlay = (skillUsed != null) ? skillUsed.castSound : (data != null ? data.attackSound : null);
+        if (AudioManager.Instance != null && clipToPlay != null) AudioManager.Instance.PlaySFX(clipToPlay);
+
+        // Calcul positions
+        Vector3 startPoint = (firePoint != null) ? firePoint.position : transform.position + Vector3.up;
+        Vector3 endPoint = target.transform.position + Vector3.up;
+
+        // Instantiation Laser / Projectile
+        if (skillUsed != null && skillUsed.castVFX != null)
+        {
+            GameObject vfxObj = Instantiate(skillUsed.castVFX, Vector3.zero, Quaternion.identity);
+            LaserEffect laser = vfxObj.GetComponent<LaserEffect>();
+            if (laser != null) laser.Setup(startPoint, endPoint);
+            else vfxObj.transform.position = startPoint; 
+        }
+
+        // 4. PETIT DÉLAI DE VOL (Pour que le laser ait le temps d'arriver)
+        // Si c'est un laser instantané, 0.1s suffit. Si c'est une boule de feu, il faut plus.
+        yield return new WaitForSeconds(0.1f); 
+        
+        // 5. IMPACT & DÉGÂTS
+        GameObject hitPrefab = (skillUsed != null) ? skillUsed.hitVFX : (data != null ? data.hitVFX : null);
+        if (hitPrefab != null) Instantiate(hitPrefab, endPoint, Quaternion.identity);
+
+        int power = (skillUsed != null) ? skillUsed.power : attackDamage;
         bool isHeal = skillUsed != null && skillUsed.isHeal;
 
-        if (isHeal)
-        {
-            target.Heal(power);
-        }
-        else
-        {
-            target.TakeDamage(power);
-        }
+        if (isHeal) target.Heal(power);
+        else target.TakeDamage(power);
         
+        // On laisse le temps à l'anim de finir tranquillement
         yield return new WaitForSeconds(0.5f);
 
-        // Mise à jour de l'UI (PV/PA changés)
         if (UIManager.Instance != null) 
         {
-            UIManager.Instance.UpdateStatsPanel(this);   // Update moi (PA)
-            UIManager.Instance.UpdateStatsPanel(target); // Update lui (PV)
+            UIManager.Instance.UpdateStatsPanel(this);
+            UIManager.Instance.UpdateStatsPanel(target);
         }
         
         CheckEndTurn();
     }
 
-    // --- MOUVEMENTS (Code précédent restauré/conservé) ---
+    // --- MOUVEMENTS ---
     
     public void CalculateChessMoves()
     {
@@ -330,7 +369,7 @@ public void PerformCombatAction(UnitController target)
         }
     }
 
-    // --- ANIMATIONS & UTILITAIRES ---
+    // --- ANIMATIONS & UTILS ---
 
     void LookAtTarget(Vector3 targetPoint)
     {
@@ -349,8 +388,7 @@ public void PerformCombatAction(UnitController target)
         int cost = validMoveTiles[targetTile];
         ClearHighlights();
         
-        if (MapGenerator.mapGrid.ContainsKey(gridPosition)) 
-            MapGenerator.mapGrid[gridPosition].currentUnit = null;
+        if (MapGenerator.mapGrid.ContainsKey(gridPosition)) MapGenerator.mapGrid[gridPosition].currentUnit = null;
 
         Vector3 startPos = transform.position;
         Vector3 endPos = new Vector3(targetTile.gridPosition.x, targetTile.height + 0.5f, targetTile.gridPosition.y);
@@ -373,40 +411,39 @@ public void PerformCombatAction(UnitController target)
         targetTile.currentUnit = this;
         currentAP -= cost;
         hasMovedThisTurn = true;
-        
-        UIManager.Instance.UpdateStatsPanel(this);
-        if (isPlayerTeam && UIManager.Instance != null) UIManager.Instance.UpdateUI(this);
+
+        if (isPlayerTeam && UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
     }
 
-    // Ajoute cette fonction pour gérer le soin
     public void Heal(int amount)
     {
         currentHP = Mathf.Min(currentHP + amount, maxHP);
-        if (damagePopupPrefab != null) { 
+        if (damagePopupPrefab != null) 
+        { 
             Transform p = Instantiate(damagePopupPrefab, transform.position + Vector3.up * 3f, Quaternion.identity); 
-            // Tu devras adapter ton DamagePopup pour qu'il prenne une couleur verte
-            p.GetComponent<DamagePopup>().Setup(amount, false); 
+            p.GetComponent<DamagePopup>().Setup(amount, true); // TRUE pour Soin
         }
-        
-        UIManager.Instance.UpdateStatsPanel(this);
+        if (UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
     }
 
     public void TakeDamage(int amount)
     {
         currentHP -= amount;
-        if (damagePopupPrefab != null) { 
+        if (damagePopupPrefab != null) 
+        { 
             Transform p = Instantiate(damagePopupPrefab, transform.position + Vector3.up * 3f, Quaternion.identity); 
             p.GetComponent<DamagePopup>().Setup(amount, false); 
         }
         if (currentHP > 0 && anim != null) anim.SetTrigger("DoHit");
         if (currentHP <= 0) StartCoroutine(DieSequence());
-        UIManager.Instance.UpdateStatsPanel(this);
+        
+        if (UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
     }
 
     IEnumerator DieSequence()
     {
         if (anim != null) anim.SetTrigger("DoDie");
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(2.5f);
         if (MapGenerator.mapGrid.ContainsKey(gridPosition)) MapGenerator.mapGrid[gridPosition].currentUnit = null;
         gameObject.SetActive(false);
         GameManager.Instance.OnUnitDied(this);
@@ -417,7 +454,7 @@ public void PerformCombatAction(UnitController target)
         currentAP = maxAP;
         hasMovedThisTurn = false;
         
-        if (UIManager.Instance != null) UIManager.Instance.UpdateUI(this);
+        if (UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
 
         if (isPlayerTeam) 
         {
@@ -428,8 +465,6 @@ public void PerformCombatAction(UnitController target)
             if (myAI != null) myAI.DoTurn();
             else { Debug.LogError($"🛑 ERREUR : {name} n'a pas d'EnemyAI !"); GameManager.Instance.EndTurn(); }
         }
-        
-        UIManager.Instance.UpdateStatsPanel(this);
     }
 
     public void ShowWalkableTiles()
@@ -460,5 +495,5 @@ public void PerformCombatAction(UnitController target)
     }
 
     public void EndTurnLogic() { ClearHighlights(); }
-    void CheckEndTurn() { if (currentAP <= 0 && isPlayerTeam) GameManager.Instance.EndTurn(); }
+    void CheckEndTurn() { if (currentAP <= -1 && isPlayerTeam) GameManager.Instance.EndTurn(); }
 }

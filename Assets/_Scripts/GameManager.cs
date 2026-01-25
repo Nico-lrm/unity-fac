@@ -86,6 +86,8 @@ public class GameManager : MonoBehaviour
 
         activeUnit = turnQueue.Dequeue();
 
+		if (TurnBarUI.Instance != null) TurnBarUI.Instance.UpdateTurnBar();
+
         if (activeUnit == null || activeUnit.currentHP <= 0)
         {
             StartNextTurn();
@@ -154,5 +156,31 @@ public class GameManager : MonoBehaviour
             GameData.Instance.sceneToLoad = SceneManager.GetActiveScene().name;
         }
         SceneManager.LoadScene("GameOverScreen");
+    }
+
+	public List<UnitController> GetTurnQueueList()
+    {
+        // Convertit la Queue en Liste pour l'affichage sans la détruire
+        List<UnitController> list = new List<UnitController>(turnQueue);
+        
+        // On ajoute l'unité active en premier si elle n'est pas déjà dedans
+        if (activeUnit != null && !list.Contains(activeUnit)) 
+        {
+            list.Insert(0, activeUnit);
+        }
+        return list;
+    }
+
+    public List<UnitController> GetAllLivingUnitsSorted()
+    {
+        return allUnits
+            .Where(u => u != null && u.currentHP > 0)
+            .OrderByDescending(u => u.speed)
+            .ToList();
+    }
+
+    public bool IsUnitInQueue(UnitController unit)
+    {
+        return turnQueue.Contains(unit);
     }
 }

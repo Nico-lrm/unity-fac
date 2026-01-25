@@ -149,7 +149,7 @@ public class MapGenerator : MonoBehaviour
             {
                 TileData spawnTile = mapGrid[spawnPos2D];
                 
-                Vector3 finalPos = new Vector3(spawnTile.gridPosition.x, spawnTile.height + 1.5f, spawnTile.gridPosition.y);
+                Vector3 finalPos = new Vector3(spawnTile.gridPosition.x, spawnTile.height + 0.5f, spawnTile.gridPosition.y);
                 GameObject unitObj = Instantiate(data.unitPrefab, finalPos, Quaternion.identity);
                 
                 UnitController controller = unitObj.GetComponent<UnitController>();

@@ -7,9 +7,6 @@ public class EnemyAI : MonoBehaviour
 {
     private UnitController myUnit;
 
-    // Chance d'utiliser un skill si disponible (30% ici)
-    [Range(0, 100)] public int skillUseChance = 30; 
-
     void Awake()
     {
         myUnit = GetComponent<UnitController>();
@@ -18,90 +15,142 @@ public class EnemyAI : MonoBehaviour
     public void DoTurn()
     {
         if (myUnit == null) myUnit = GetComponent<UnitController>();
-        StartCoroutine(ThinkAndActSafe());
+        StartCoroutine(ThinkAndActTactical());
     }
 
-    IEnumerator ThinkAndActSafe()
+    IEnumerator ThinkAndActTactical()
     {
-        // Sécurité anti-blocage
         CancelInvoke("ForceEndTurn");
-        Invoke("ForceEndTurn", 5.0f);
+        Invoke("ForceEndTurn", 8.0f); 
 
-        yield return new WaitForSeconds(1.0f); // Temps de réflexion simulé
+        yield return new WaitForSeconds(0.8f); 
 
-        UnitController target = FindClosestPlayer();
-        
+        UnitController target = FindClosestPlayerInGrid();
+
         if (target != null)
         {
-            // --- ÉTAPE 1 : Essayer d'attaquer ou lancer un sort ---
-            bool actionDone = TryAttackOrSkill(target);
+            bool hasAttacked = TryBestAttackAction(target);
 
-            // --- ÉTAPE 2 : Si on n'a rien pu faire (trop loin), on bouge ---
-            if (!actionDone)
+            if (!hasAttacked)
             {
-                // On calcule le chemin
                 myUnit.CalculateChessMoves();
-                
-                // On cherche la case la plus proche du joueur
-                var possibleMoves = myUnit.validMoveTiles.Keys.ToList();
-                if (possibleMoves.Count > 0)
-                {
-                    // Tri des cases par distance vers le joueur
-                    possibleMoves.Sort((a, b) => 
-                    {
-                        float distA = Vector3.Distance(a.transform.position, target.transform.position);
-                        float distB = Vector3.Distance(b.transform.position, target.transform.position);
-                        return distA.CompareTo(distB);
-                    });
 
-                    // On bouge vers la meilleure case
-                    yield return StartCoroutine(myUnit.MoveChessPiece(possibleMoves[0]));
+                TileData bestTile = FindBestTileToAttackFrom(target);
+
+                if (bestTile != null)
+                {
+                    yield return StartCoroutine(myUnit.MoveChessPiece(bestTile));
                     
-                    // Après avoir bougé, on réessaie d'attaquer (si on a encore des PA)
                     yield return new WaitForSeconds(0.5f);
-                    TryAttackOrSkill(target);
+                    TryBestAttackAction(target);
+                }
+                else
+                {
+                    TileData closestTile = FindClosestTileToTarget();
+                    if (closestTile != null)
+                    {
+                        yield return StartCoroutine(myUnit.MoveChessPiece(closestTile));
+                    }
                 }
             }
         }
 
-        // Fin du tour
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(1.0f);
         EndAITurn();
     }
 
-    bool TryAttackOrSkill(UnitController target)
-    {
-        float dist = Vector3.Distance(transform.position, target.transform.position);
-        int distInt = Mathf.CeilToInt(dist - 0.1f);
 
-        // A. Tenter un SKILL (Aléatoire)
-        if (myUnit.data.skills.Count > 0 && Random.Range(0, 100) < skillUseChance)
+
+    bool TryBestAttackAction(UnitController target)
+    {
+        int dist = GetGridDistance(myUnit.gridPosition, target.gridPosition);
+
+        SkillData bestSkill = null;
+        bool canUseBasicAttack = false;
+        int maxDamage = -1;
+
+        foreach (var skill in myUnit.data.skills)
         {
-            // On prend un skill au hasard
-            SkillData chosenSkill = myUnit.data.skills[Random.Range(0, myUnit.data.skills.Count)];
-            
-            // On vérifie Portée et Coût
-            if (distInt <= chosenSkill.range && myUnit.currentAP >= chosenSkill.apCost && !chosenSkill.isHeal)
+            if (skill.isHeal) continue; 
+
+            if (dist <= skill.range && myUnit.currentAP >= skill.apCost)
             {
-                myUnit.EnterCombatMode(chosenSkill); // Prépare le skill
-                myUnit.PerformCombatAction(target);  // Lance le skill
-                return true;
+                if (skill.power > maxDamage)
+                {
+                    maxDamage = skill.power;
+                    bestSkill = skill;
+                }
             }
         }
 
-        // B. Sinon, ATTAQUE DE BASE
-        // On vérifie la portée de base de l'unité
-        if (distInt >= myUnit.data.minRange && distInt <= myUnit.data.maxRange)
+        if (dist >= myUnit.data.minRange && dist <= myUnit.data.maxRange)
         {
-            if (myUnit.currentAP >= 3) // Coût attaque base
+            if (myUnit.currentAP >= 3) 
             {
-                myUnit.EnterCombatMode(null); // Null = Attaque de base
-                myUnit.PerformCombatAction(target);
-                return true;
+                if (bestSkill == null || myUnit.attackDamage >= maxDamage)
+                {
+                    canUseBasicAttack = true;
+                    if (myUnit.attackDamage > maxDamage) bestSkill = null; 
+                }
             }
+        }
+
+        if (bestSkill != null)
+        {
+            myUnit.EnterCombatMode(bestSkill);
+            myUnit.PerformCombatAction(target);
+            return true;
+        }
+        else if (canUseBasicAttack)
+        {
+            myUnit.EnterCombatMode(null);
+            myUnit.PerformCombatAction(target);
+            return true;
         }
 
         return false;
+    }
+
+    TileData FindBestTileToAttackFrom(UnitController target)
+    {
+        foreach (var kvp in myUnit.validMoveTiles) 
+        {
+            TileData tile = kvp.Key;
+            int moveCost = kvp.Value;
+            int remainingAP = myUnit.currentAP - moveCost;
+
+            int distToTarget = GetGridDistance(tile.gridPosition, target.gridPosition);
+
+            if (remainingAP >= 3 && 
+                distToTarget >= myUnit.data.minRange && 
+                distToTarget <= myUnit.data.maxRange)
+            {
+                return tile; 
+            }
+        }
+        return null;
+    }
+
+    TileData FindClosestTileToTarget()
+    {
+        UnitController target = FindClosestPlayerInGrid();
+        if (target == null || myUnit.validMoveTiles.Count == 0) return null;
+
+        return myUnit.validMoveTiles.Keys.OrderBy(t => GetGridDistance(t.gridPosition, target.gridPosition)).FirstOrDefault();
+    }
+
+
+    UnitController FindClosestPlayerInGrid()
+    {
+        var players = GameManager.Instance.allUnits.Where(u => u.isPlayerTeam && u.currentHP > 0).ToArray();
+        if (players.Length == 0) return null;
+        
+        return players.OrderBy(p => GetGridDistance(myUnit.gridPosition, p.gridPosition)).First();
+    }
+
+    int GetGridDistance(Vector2 posA, Vector2 posB)
+    {
+        return Mathf.Abs((int)posA.x - (int)posB.x) + Mathf.Abs((int)posA.y - (int)posB.y);
     }
 
     void EndAITurn()
@@ -113,12 +162,5 @@ public class EnemyAI : MonoBehaviour
     void ForceEndTurn()
     {
         GameManager.Instance.EndTurn();
-    }
-
-    UnitController FindClosestPlayer()
-    {
-        var players = GameManager.Instance.allUnits.Where(u => u.isPlayerTeam && u.currentHP > 0).ToArray();
-        if (players.Length == 0) return null;
-        return players.OrderBy(p => Vector3.Distance(transform.position, p.transform.position)).First();
     }
 }

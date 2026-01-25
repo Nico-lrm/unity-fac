@@ -9,8 +9,19 @@ public class DeploymentManager : MonoBehaviour
     [Header("Données")]
     public UnitDatabase unitDB; 
 
+    // --- NOUVEAU : STRUCTURE DE CATÉGORIE ---
+    [System.Serializable]
+    public class DeploymentCategory
+    {
+        public string name;          // Nom pour t'aider dans l'inspecteur (ex: "Rois")
+        public ChessType type;       // Le type d'unité lié (King, Queen...)
+        public Transform container;  // La ligne (Horizontal Layout) où mettre les boutons
+    }
+
     [Header("UI Références")]
-    public Transform rosterContainer; 
+    // On remplace le simple rosterContainer par une liste de catégories
+    public List<DeploymentCategory> categories; 
+
     public Transform teamContainer;  
     public GameObject unitButtonPrefab; 
     
@@ -26,9 +37,6 @@ public class DeploymentManager : MonoBehaviour
     private const int MAX_POINTS = 5; 
     private bool hasKing = false;
 
-    // Liste pour garder une trace des boutons et mettre à jour leur visuel "Sélectionné"
-    private List<UnitButtonSlot> allSlots = new List<UnitButtonSlot>();
-
     void Start()
     {
         GenerateRoster();
@@ -37,23 +45,39 @@ public class DeploymentManager : MonoBehaviour
 
     void GenerateRoster()
     {
-        // Nettoyage
-        foreach (Transform child in rosterContainer) Destroy(child.gameObject);
-        allSlots.Clear();
+        // 1. Nettoyage de TOUTES les catégories
+        foreach (var cat in categories)
+        {
+            if (cat.container != null)
+            {
+                foreach (Transform child in cat.container) Destroy(child.gameObject);
+            }
+        }
 
-        // Création des boutons depuis la DB
+        // 2. Création des boutons depuis la DB
         foreach (var unit in unitDB.allUnits) 
         {
-            
-            // On utilise directement la variable de la boucle
             UnitData data = unit; 
-            
             if (data == null) continue;
 
-            GameObject btnObj = Instantiate(unitButtonPrefab, rosterContainer);
-            UnitButtonSlot slot = btnObj.GetComponent<UnitButtonSlot>();
-            
-            slot.Setup(data, OnUnitClicked);
+            // --- NOUVEAU : TROUVER LA BONNE CATÉGORIE ---
+            // On cherche dans notre liste la catégorie qui correspond au type de l'unité
+            DeploymentCategory targetCat = categories.Find(c => c.type == data.pieceType);
+
+            if (targetCat != null && targetCat.container != null)
+            {
+                // On instancie DANS le conteneur spécifique
+                GameObject btnObj = Instantiate(unitButtonPrefab, targetCat.container);
+                UnitButtonSlot slot = btnObj.GetComponent<UnitButtonSlot>();
+                slot.Setup(data, OnUnitClicked);
+                
+                // Si l'unité est déjà dans l'équipe (au reload), on la marque
+                if (myTeam.Contains(data)) slot.SetSelected(true);
+            }
+            else
+            {
+                Debug.LogWarning($"Pas de catégorie configurée pour le type : {data.pieceType}");
+            }
         }
     }
 
@@ -71,31 +95,14 @@ public class DeploymentManager : MonoBehaviour
         }
         
         UpdateUI();
-        RefreshVisuals();
+        RefreshTeamVisuals(); // On ne refresh que la barre du bas
     }
 
     void TryAddUnit(UnitData data)
     {
-        // Vérif Roi Unique
-        if (data.pieceType == ChessType.King && hasKing)
-        {
-            Debug.Log("Vous avez déjà un Roi !");
-            return;
-        }
-
-        // Vérif Slots (Max 4 bonhommes sur le terrain)
-        if (myTeam.Count >= MAX_SLOTS)
-        {
-            Debug.Log("Armée complète (Max 4 unités) !");
-            return;
-        }
-
-        // Vérif Points
-        if (currentPoints + data.deploymentCost > MAX_POINTS)
-        {
-            Debug.Log("Pas assez de points de déploiement !");
-            return;
-        }
+        if (data.pieceType == ChessType.King && hasKing) { Debug.Log("Déjà un Roi !"); return; }
+        if (myTeam.Count >= MAX_SLOTS) { Debug.Log("Armée complète !"); return; }
+        if (currentPoints + data.deploymentCost > MAX_POINTS) { Debug.Log("Pas assez de points !"); return; }
         
         myTeam.Add(data);
         currentPoints += data.deploymentCost;
@@ -109,7 +116,8 @@ public class DeploymentManager : MonoBehaviour
         if (data.pieceType == ChessType.King) hasKing = false;
     }
 
-    void RefreshVisuals()
+    // Met à jour la barre "Mon Équipe" en bas
+    void RefreshTeamVisuals()
     {
         if (teamContainer != null)
         {
@@ -117,7 +125,12 @@ public class DeploymentManager : MonoBehaviour
             foreach (var unit in myTeam)
             {
                 GameObject icon = Instantiate(unitButtonPrefab, teamContainer);
-                icon.GetComponent<UnitButtonSlot>().Setup(unit, OnUnitClicked); 
+                // Dans la barre d'équipe, cliquer retire l'unité
+                icon.GetComponent<UnitButtonSlot>().Setup(unit, (d) => { 
+                    RemoveUnit(d); 
+                    UpdateUI(); 
+                    RefreshTeamVisuals(); 
+                }); 
                 icon.GetComponent<UnitButtonSlot>().SetSelected(true);
             }
         }
@@ -126,24 +139,16 @@ public class DeploymentManager : MonoBehaviour
     void UpdateUI()
     {
         infoText.text = $"Unités : {myTeam.Count}/{MAX_SLOTS}\nPoints : {currentPoints}/{MAX_POINTS}\nRoi : {(hasKing ? "<color=green>OUI</color>" : "<color=red>NON</color>")}";
-        
-        // Le bouton Lancer n'est actif que si on a un Roi et au moins 1 autre unité
         launchButton.interactable = hasKing && myTeam.Count > 1;
     }
 
     public void LaunchMission()
     {
-        // Sauvegarde l'équipe
         if (GameData.Instance != null)
         {
             GameData.Instance.selectedRoster = new List<UnitData>(myTeam);
-            
-            // Charge la mission (le nom est stocké dans GameData depuis le Menu Principal)
             string sceneToLoad = GameData.Instance.sceneToLoad;
-            
-            // Sécurité si vide
             if (string.IsNullOrEmpty(sceneToLoad)) sceneToLoad = "Mission_1_1";
-            
             SceneManager.LoadScene(sceneToLoad);
         }
     }

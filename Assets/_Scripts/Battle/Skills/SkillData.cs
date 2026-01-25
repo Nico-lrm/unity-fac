@@ -11,4 +11,12 @@ public class SkillData : ScriptableObject
     
     [TextArea]
     public string description;
+
+	[Header("FX & Audio")]
+    public GameObject castVFX;
+    public AudioClip castSound;
+    public GameObject hitVFX;
+
+	[Header("Timing")]
+    public float castDelay = 0.5f; // Temps avant l'apparition du VFX 
 }

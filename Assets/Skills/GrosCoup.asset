@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   skillName: Gros Coup
   apCost: 5
-  range: 1
+  range: 2
   power: 15
   isHeal: 0
   description: "Un coup de bais\xE9"

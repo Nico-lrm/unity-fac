@@ -27,4 +27,11 @@ public class UnitData : ScriptableObject
     
     [Header("Compétences")]
     public List<SkillData> skills = new List<SkillData>();
+
+	[Header("FX Attaque Base")]
+    public AudioClip attackSound; // Bruit coup d'épée / Tir
+    public GameObject hitVFX;     // Sang / Étincelles
+
+	[Header("Timing Attaque")]
+    public float attackAnimDelay = 0.3f;
 }
