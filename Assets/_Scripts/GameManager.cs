@@ -81,22 +81,30 @@ public class GameManager : MonoBehaviour
     {
         if (state == GameState.GameOver) return;
 
+        // --- AJOUT ICI : On nettoie l'unité précédente avant de changer ---
+        if (activeUnit != null)
+        {
+            activeUnit.EndTurnLogic(); // Cache le cercle de celui qui vient de finir
+        }
+        // ------------------------------------------------------------------
+
         if (turnQueue.Count == 0) RebuildTurnQueue();
         if (turnQueue.Count == 0) return;
 
         activeUnit = turnQueue.Dequeue();
 
-		if (TurnBarUI.Instance != null) TurnBarUI.Instance.UpdateTurnBar();
+        if (TurnBarUI.Instance != null) TurnBarUI.Instance.UpdateTurnBar();
 
+        // Vérification si l'unité piochée est morte entre temps
         if (activeUnit == null || activeUnit.currentHP <= 0)
         {
             StartNextTurn();
             return;
         }
-        
+
         if (CameraFollow.Instance != null) CameraFollow.Instance.ResetCameraOnActiveUnit();
 
-        activeUnit.BeginTurn();
+        activeUnit.BeginTurn(); // Affiche le cercle du nouveau
     }
 
     public void EndTurn() { StartNextTurn(); }

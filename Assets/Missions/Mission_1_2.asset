@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 975b9d34ccd7d524194dc3d91069ba90, type: 3}
   m_Name: Mission_1_2
   m_EditorClassIdentifier: Assembly-CSharp::MissionData
-  missionName: Mission Test Island
+  missionName: Le volcan
   sceneName: Mission_1_2
-  description: 
+  mapConfig: {fileID: 11400000, guid: 16e027ddaaa6b8447b45bb5bd453f2c1, type: 2}
+  description: "Mission avec les d\xE9mons l\xE0 bof"

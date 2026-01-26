@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Lava01_Variant01
-  m_Shader: {fileID: 4800000, guid: 9490d736e0c5cf94c83f14f7e65f3a11, type: 3}
+  m_Shader: {fileID: 4800000, guid: 4624d0ab0fbbebb4d9c12ff52c2873aa, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -19,6 +19,7 @@ Material:
   - _OCCLUSIONMAP
   - _PARALLAXMAP
   - _USERANDOMOFFSET_ON
+  - _USERANDOMUV_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -102,6 +103,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
+    - _EmissionPower: 3
     - _EnvironmentReflections: 1
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -111,7 +113,13 @@ Material:
     - _OcclusionStrength: 1
     - _OutlineWidth: 0.03
     - _Parallax: 0.02
+    - _PulseMax: 1.5
+    - _PulseMin: 0.5
+    - _PulseSpeed: 2
     - _QueueOffset: 0
+    - _RampSmoothness: 0.5
+    - _RampThreshold: 0.177
+    - _RandomStrength: 0.2
     - _ReceiveShadows: 1
     - _Smoothness: 1
     - _SmoothnessTextureChannel: 0
@@ -119,9 +127,13 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _TextureZoom: 0.737
+    - _TextureZoom: 1.22
     - _UVSec: 0
+    - _UseEmission: 0
+    - _UsePulse: 0
     - _UseRandomOffset: 1
+    - _UseRandomTint: 0
+    - _UseRandomUV: 1
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1

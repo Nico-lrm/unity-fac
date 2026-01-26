@@ -8,11 +8,14 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Mat_3_Terre
-  m_Shader: {fileID: 4800000, guid: 9490d736e0c5cf94c83f14f7e65f3a11, type: 3}
+  m_Shader: {fileID: 4800000, guid: 4624d0ab0fbbebb4d9c12ff52c2873aa, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _USERANDOMOFFSET_ON
+  - _USERANDOMTINT_ON
+  - _USERANDOMUV_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -69,6 +72,7 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
+    - _EmissionPower: 3
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
@@ -77,12 +81,22 @@ Material:
     - _OcclusionStrength: 1
     - _OutlineWidth: 0.03
     - _Parallax: 0.02
+    - _PulseMax: 1.5
+    - _PulseMin: 0.5
+    - _PulseSpeed: 2
+    - _RampSmoothness: 0.5
+    - _RampThreshold: 0.418
+    - _RandomStrength: 0.057
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _TextureZoom: 0.25
+    - _TextureZoom: 0.85
     - _UVSec: 0
+    - _UseEmission: 0
+    - _UsePulse: 0
     - _UseRandomOffset: 1
+    - _UseRandomTint: 1
+    - _UseRandomUV: 1
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}

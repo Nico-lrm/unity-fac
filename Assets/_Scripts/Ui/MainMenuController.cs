@@ -64,23 +64,32 @@ public class MainMenuController : MonoBehaviour
         CloseAll();
         missionListPanel.SetActive(true);
 
-        // Mise à jour du titre
-        if(chapterTitleText != null) chapterTitleText.text = chapter.chapterName;
+        if (chapterTitleText != null) chapterTitleText.text = chapter.chapterName;
 
-        // Nettoyage de la liste précédente
         foreach (Transform child in missionContainer) Destroy(child.gameObject);
 
-        // Création des boutons
         foreach (var mission in chapter.missions)
         {
             GameObject btnObj = Instantiate(missionButtonPrefab, missionContainer);
-            
-            // Texte du bouton (ex: "1-1 : L'Attaque")
-            btnObj.GetComponentInChildren<TextMeshProUGUI>().text = mission.missionName;
 
-            // Clic sur le bouton
+            // 1. Mise à jour du Texte
+            TextMeshProUGUI txt = btnObj.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null) txt.text = mission.missionName;
+
+            // 2. Configuration du Clic (Lancer le jeu)
             Button btn = btnObj.GetComponent<Button>();
             btn.onClick.AddListener(() => LaunchMissionSetup(mission.sceneName));
+
+            // --- 3. CONFIGURATION DU PREVIEW (HOVER) ---
+            // On cherche le script qu'on vient de modifier
+            MissionButtonHover hoverScript = btnObj.GetComponent<MissionButtonHover>();
+
+            // Si le script est présent sur le prefab, on lui envoie la MapDefinition
+            if (hoverScript != null)
+            {
+                hoverScript.Setup(mission.mapConfig);
+            }
+            // -------------------------------------------
         }
     }
 

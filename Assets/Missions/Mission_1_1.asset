@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 975b9d34ccd7d524194dc3d91069ba90, type: 3}
   m_Name: Mission_1_1
   m_EditorClassIdentifier: Assembly-CSharp::MissionData
-  missionName: Les bases
+  missionName: "Le mar\xE9cage"
   sceneName: Mission_1_1
-  description: "Truc de base le boss tout \xE7a jsp moi"
+  mapConfig: {fileID: 11400000, guid: 2e8cd863005c6394bab37c6d56e79109, type: 2}
+  description: "Les mobs du mar\xE9cage"

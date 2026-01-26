@@ -12,7 +12,11 @@ public class UnitController : MonoBehaviour
     public int currentHP;
     public int currentAP;
     public int maxAP = 6;
-    
+
+    [Header("UI & Feedback")]
+    public GameObject turnIndicatorPrefab; 
+    private GameObject myIndicatorInstance;
+
     // Skill sélectionné (null = Attaque de base)
     public SkillData selectedSkill; 
 
@@ -53,7 +57,24 @@ public class UnitController : MonoBehaviour
         anim = GetComponentInChildren<Animator>();
     }
 
-public void Initialize(UnitData unitData, bool isPlayer)
+    void Start()
+    {
+        // On crée le cercle dès le début et on le cache
+        if (turnIndicatorPrefab != null)
+        {
+            myIndicatorInstance = Instantiate(turnIndicatorPrefab, transform);
+            // On le place aux pieds (0, 0.05, 0)
+            myIndicatorInstance.transform.localPosition = new Vector3(0, 0.05f, 0);
+
+            // On configure la couleur
+            TurnIndicator indicatorScript = myIndicatorInstance.GetComponent<TurnIndicator>();
+            if (indicatorScript != null) indicatorScript.Setup(isPlayerTeam);
+
+            myIndicatorInstance.SetActive(false); // Caché par défaut
+        }
+    }
+
+    public void Initialize(UnitData unitData, bool isPlayer)
     {
         data = unitData;
         isPlayerTeam = isPlayer;
@@ -453,7 +474,9 @@ public void Initialize(UnitData unitData, bool isPlayer)
     {
         currentAP = maxAP;
         hasMovedThisTurn = false;
-        
+
+        if (myIndicatorInstance != null) myIndicatorInstance.SetActive(true);
+
         if (UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
 
         if (isPlayerTeam) 
@@ -462,6 +485,7 @@ public void Initialize(UnitData unitData, bool isPlayer)
         }
         else 
         {
+            var ai = GetComponent<EnemyAI>();
             if (myAI != null) myAI.DoTurn();
             else { Debug.LogError($"🛑 ERREUR : {name} n'a pas d'EnemyAI !"); GameManager.Instance.EndTurn(); }
         }
@@ -494,6 +518,11 @@ public void Initialize(UnitData unitData, bool isPlayer)
         }
     }
 
-    public void EndTurnLogic() { ClearHighlights(); }
+    public void EndTurnLogic() 
+    {
+        if (myIndicatorInstance != null) myIndicatorInstance.SetActive(false);
+        ClearHighlights(); 
+    }
+
     void CheckEndTurn() { if (currentAP <= -1 && isPlayerTeam) GameManager.Instance.EndTurn(); }
 }
