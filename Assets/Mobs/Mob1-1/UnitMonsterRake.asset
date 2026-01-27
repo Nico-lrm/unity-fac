@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3d26e1bfaa1f2f499705a10b54c7b06, type: 3}
   m_Name: UnitMonsterRake
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
-  unitName: Combattant Rake
+  unitName: Rake
   pieceType: 3
   unitPrefab: {fileID: 6133379465444367112, guid: 914d2118b3c427c4f8fabba82e54eaaf, type: 3}
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 5aca7637e0e1811408244ac94d0105ed, type: 3}
   deploymentCost: 1
   maxHP: 18
   attackDamage: 4

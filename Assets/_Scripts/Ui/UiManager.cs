@@ -30,7 +30,18 @@ public class UIManager : MonoBehaviour
     [Header("Bannière Annonce")]
     public GameObject announcementPanel;
     public TextMeshProUGUI announcementText;
-    
+
+    [Header("Target Panel (Souris)")]
+    public GameObject targetPanel;
+    public TextMeshProUGUI targetNameText;
+    public TextMeshProUGUI targetHPText;
+
+    [Header("Combat Log")]
+    public ScrollRect logScrollRect;
+    public Transform logContainer; // Le content du ScrollView
+    public GameObject logTextPrefab; // Un simple text TMP
+    public int maxLogLines = 10;
+
     // Unité actuellement sélectionnée pour l'UI
     private UnitController currentUIUnit;
 
@@ -85,10 +96,11 @@ public class UIManager : MonoBehaviour
             });
         }
     }
-    
-    public void UpdateStatsPanel(UnitController unit)
+
+    public void UpdateActiveUnitPanel(UnitController unit)
     {
-        if (unit == null)
+        // Sécurité
+        if (unit == null || statPanel == null)
         {
             statPanel.SetActive(false);
             return;
@@ -96,14 +108,18 @@ public class UIManager : MonoBehaviour
 
         statPanel.SetActive(true);
 
-        // 1. Nom
+        // 1. Image & Nom
         nameText.text = unit.unitName;
+        // Si tu as une image dans ton panel, mets-la ici :
+        // if(portraitImg != null) portraitImg.sprite = unit.data.icon;
 
-        // 2. PV (Rouge si bas, Blanc sinon)
+        // 2. PV (Mise à jour dynamique)
         hpText.text = $"HP: {unit.currentHP} / {unit.maxHP}";
-        hpText.color = (unit.currentHP < unit.maxHP * 0.3f) ? Color.red : Color.white;
 
-        // 3. PA (Seulement si c'est le joueur)
+        // Petite animation de couleur : Rouge si critique (< 30%)
+        hpText.color = (unit.currentHP <= unit.maxHP * 0.3f) ? Color.red : Color.white;
+
+        // 3. PA (Cacher si Ennemi)
         if (unit.isPlayerTeam)
         {
             apText.gameObject.SetActive(true);
@@ -111,13 +127,12 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            // Pour l'ennemi, on cache les PA (info inutile pour le joueur)
             apText.gameObject.SetActive(false);
         }
     }
 
     // --- LOGIQUE DU MENU DES SORTS ---
-    
+
     public void OpenSkillMenu()
     {
         actionMenu.SetActive(false); // On cache le menu principal
@@ -173,10 +188,59 @@ public class UIManager : MonoBehaviour
         yield return new WaitForSeconds(duration);
         announcementPanel.SetActive(false);
     }
-    
-    // Met à jour l'interface (PA/PV) si tu as un panel de stats
-    public void UpdateUI(UnitController unit)
+
+    public void UpdateTargetPanel(UnitController hoveredUnit)
     {
-        // Ici tu mettras à jour tes barres de vie plus tard
+        if (hoveredUnit == null)
+        {
+            // Si on ne survole rien, on cache le panneau cible
+            // OU on peut laisser le panneau afficher la dernière action
+            targetPanel.SetActive(false);
+            return;
+        }
+
+        targetPanel.SetActive(true);
+        targetNameText.text = hoveredUnit.unitName;
+        targetHPText.text = $"{hoveredUnit.currentHP} / {hoveredUnit.maxHP} PV";
+
+        // Change la couleur du nom selon l'équipe
+        targetNameText.color = hoveredUnit.isPlayerTeam ? Color.cyan : Color.red;
+    }
+
+    public void AddToLog(string message)
+    {
+        if (logContainer == null || logTextPrefab == null) return;
+
+        // 1. Création du message
+        GameObject newLog = Instantiate(logTextPrefab, logContainer);
+
+        // On récupère le texte pour l'assigner
+        var textComp = newLog.GetComponent<TextMeshProUGUI>();
+        if (textComp != null) textComp.text = message;
+
+        // 2. Gestion de la limite (Supprime le plus vieux en haut)
+        if (logContainer.childCount > maxLogLines)
+        {
+            Destroy(logContainer.GetChild(0).gameObject);
+        }
+
+        // 3. AUTO-SCROLL VERS LE BAS (L'effet Dofus)
+        // On le fait via une Coroutine pour attendre que l'UI se dessine
+        StartCoroutine(ScrollToBottom());
+    }
+
+    IEnumerator ScrollToBottom()
+    {
+        // On attend la fin de la frame pour que Unity calcule la nouvelle taille du texte
+        yield return new WaitForEndOfFrame();
+
+        // On force la mise à jour des layouts
+        Canvas.ForceUpdateCanvases();
+
+        // On met la scrollbar tout en bas (0 = Bas, 1 = Haut)
+        if (logScrollRect != null)
+        {
+            logScrollRect.verticalNormalizedPosition = 0f;
+        }
     }
 }

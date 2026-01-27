@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3d26e1bfaa1f2f499705a10b54c7b06, type: 3}
   m_Name: UnitMonsterLizard
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
-  unitName: "Combattant l\xE9zard"
-  pieceType: 2
+  unitName: "L\xE9zard"
+  pieceType: 4
   unitPrefab: {fileID: 500768842437401557, guid: 1b47fd1f68c7b054f87745e2cd55b88e, type: 3}
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 4752492fb4eb33d4089bcf712229cc0c, type: 3}
   deploymentCost: 1
   maxHP: 16
   attackDamage: 4

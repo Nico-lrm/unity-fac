@@ -15,7 +15,7 @@ MonoBehaviour:
   unitName: Shepard
   pieceType: 0
   unitPrefab: {fileID: 3057827977219736321, guid: 215c2d5ae299bde43978d9ea14cd854e, type: 3}
-  icon: {fileID: 21300000, guid: ea69d5776b614d341953c521cc86f681, type: 3}
+  icon: {fileID: 21300000, guid: 8ce27543f511a6542951ad431c4d7683, type: 3}
   deploymentCost: 1
   maxHP: 30
   attackDamage: 3

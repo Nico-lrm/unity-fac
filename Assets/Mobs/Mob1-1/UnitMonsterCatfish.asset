@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3d26e1bfaa1f2f499705a10b54c7b06, type: 3}
   m_Name: UnitMonsterCatfish
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
-  unitName: Combattant Catfish
-  pieceType: 4
+  unitName: Catfish
+  pieceType: 2
   unitPrefab: {fileID: 4982755844547400146, guid: 9d13e518dbc181e42aa371f974aedea7, type: 3}
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: aaa365bfbe0a88844af1d6de9487757a, type: 3}
   deploymentCost: 1
   maxHP: 26
   attackDamage: 2

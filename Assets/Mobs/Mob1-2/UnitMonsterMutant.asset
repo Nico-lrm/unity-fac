@@ -15,7 +15,7 @@ MonoBehaviour:
   unitName: Mutant
   pieceType: 5
   unitPrefab: {fileID: 3830837541577229487, guid: 97085c9b90f8ab74da6f7e03b345ff9c, type: 3}
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 2c8404a86252828408847ad47f13be6b, type: 3}
   deploymentCost: 1
   maxHP: 10
   attackDamage: 3

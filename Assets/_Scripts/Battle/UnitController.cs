@@ -316,6 +316,18 @@ public class UnitController : MonoBehaviour
         int power = (skillUsed != null) ? skillUsed.power : attackDamage;
         bool isHeal = skillUsed != null && skillUsed.isHeal;
 
+        if (UIManager.Instance != null)
+        {
+            string colorAttacker = isPlayerTeam ? "#00FFFF" : "#FF5555"; // Cyan ou Rouge
+            string colorTarget = target.isPlayerTeam ? "#00FFFF" : "#FF5555";
+            string actionName = (skillUsed != null) ? skillUsed.skillName : "Coup simple";
+            string sign = isHeal ? "+" : "-";
+            string colorResult = isHeal ? "green" : "orange";
+
+            string msg = $"<color={colorAttacker}>{unitName}</color> utilise <b>{actionName}</b> sur <color={colorTarget}>{target.unitName}</color> (<color={colorResult}>{sign}{power} PV</color>)";
+            UIManager.Instance.AddToLog(msg);
+        }
+
         if (isHeal) target.Heal(power);
         else target.TakeDamage(power);
         
@@ -324,8 +336,7 @@ public class UnitController : MonoBehaviour
 
         if (UIManager.Instance != null) 
         {
-            UIManager.Instance.UpdateStatsPanel(this);
-            UIManager.Instance.UpdateStatsPanel(target);
+            UIManager.Instance.UpdateActiveUnitPanel(this);
         }
         
         CheckEndTurn();
@@ -433,18 +444,26 @@ public class UnitController : MonoBehaviour
         currentAP -= cost;
         hasMovedThisTurn = true;
 
-        if (isPlayerTeam && UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
+        if (isPlayerTeam && UIManager.Instance != null) UIManager.Instance.UpdateActiveUnitPanel(this);
     }
 
     public void Heal(int amount)
     {
         currentHP = Mathf.Min(currentHP + amount, maxHP);
+
+        if (UIManager.Instance != null)
+        {
+            string cName = isPlayerTeam ? "#00FFFF" : "#FF5555";
+            UIManager.Instance.AddToLog($"<color={cName}>{unitName}</color> reçoit du soin : <color=green>+{amount} PV</color>");
+        }
+
+
         if (damagePopupPrefab != null) 
         { 
             Transform p = Instantiate(damagePopupPrefab, transform.position + Vector3.up * 3f, Quaternion.identity); 
             p.GetComponent<DamagePopup>().Setup(amount, true); // TRUE pour Soin
         }
-        if (UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
+        if (UIManager.Instance != null) UIManager.Instance.UpdateActiveUnitPanel(this);
     }
 
     public void TakeDamage(int amount)
@@ -456,9 +475,28 @@ public class UnitController : MonoBehaviour
             p.GetComponent<DamagePopup>().Setup(amount, false); 
         }
         if (currentHP > 0 && anim != null) anim.SetTrigger("DoHit");
-        if (currentHP <= 0) StartCoroutine(DieSequence());
-        
-        if (UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
+        if (currentHP <= 0)
+        {
+            if (UIManager.Instance != null)
+            {
+                string cName = isPlayerTeam ? "#00FFFF" : "#FF5555";
+                UIManager.Instance.AddToLog($"<color={cName}>{unitName}</color> a été <color=red>ÉLIMINÉ</color> !");
+            }
+
+            StartCoroutine(DieSequence());
+        }
+
+        if (GameManager.Instance.activeUnit == this)
+            UIManager.Instance.UpdateActiveUnitPanel(this);
+        if (UIManager.Instance != null) UIManager.Instance.UpdateActiveUnitPanel(this);
+    }
+
+    public void ConsumeAP(int cost)
+    {
+        currentAP -= cost;
+
+        if (GameManager.Instance.activeUnit == this)
+            UIManager.Instance.UpdateActiveUnitPanel(this);
     }
 
     IEnumerator DieSequence()
@@ -477,7 +515,7 @@ public class UnitController : MonoBehaviour
 
         if (myIndicatorInstance != null) myIndicatorInstance.SetActive(true);
 
-        if (UIManager.Instance != null) UIManager.Instance.UpdateStatsPanel(this);
+        if (UIManager.Instance != null) UIManager.Instance.UpdateActiveUnitPanel(this);
 
         if (isPlayerTeam) 
         {

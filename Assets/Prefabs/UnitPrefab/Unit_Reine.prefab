@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1130607730786729673}
   - component: {fileID: 2348878500079290912}
   - component: {fileID: 265826677796535677}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Unit_Reine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -133,7 +133,7 @@ MonoBehaviour:
   maxAP: 6
   turnIndicatorPrefab: {fileID: 5872081794074664060, guid: 6f737fd0667c6af41bf6572884fec747, type: 3}
   selectedSkill: {fileID: 0}
-  damagePopupPrefab: {fileID: 6865636268923470417, guid: 0195c40d20cfb764d800d359a929fbcb, type: 3}
+  damagePopupPrefab: {fileID: 294323927845281286, guid: ba8f7b63d0d6f944e8ed8da1aab98f16, type: 3}
   firePoint: {fileID: 0}
   rotationSpeed: 10
   gridPosition: {x: 0, y: 0}

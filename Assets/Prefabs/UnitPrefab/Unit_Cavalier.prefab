@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5109847196324201124}
   - component: {fileID: 7807245792676068231}
   - component: {fileID: 1902926343395526566}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Unit_Cavalier
   m_TagString: Untagged
   m_Icon: {fileID: 0}
