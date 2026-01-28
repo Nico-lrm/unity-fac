@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 975b9d34ccd7d524194dc3d91069ba90, type: 3}
   m_Name: Mission_1_1
   m_EditorClassIdentifier: Assembly-CSharp::MissionData
+  missionID: 1-1
   missionName: "Le mar\xE9cage"
   sceneName: Mission_1_1
   mapConfig: {fileID: 11400000, guid: 2e8cd863005c6394bab37c6d56e79109, type: 2}

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad736dbc7c31508499873b8cab6649db, type: 3}
   m_Name: Chapter_1
   m_EditorClassIdentifier: Assembly-CSharp::ChapterData
-  chapterName: "Premi\xE8res missions"
+  chapterName: Missions tutoriel
   missions:
   - {fileID: 11400000, guid: bdcbd9da8fd058247ac7f1490f7ea8c2, type: 2}
   - {fileID: 11400000, guid: 8ac4e778b43b96e4ba23519949879804, type: 2}

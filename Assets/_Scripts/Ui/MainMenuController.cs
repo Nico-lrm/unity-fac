@@ -21,6 +21,8 @@ public class MainMenuController : MonoBehaviour
     public Slider volumeSlider;
     public TMP_Dropdown qualityDropdown;
 
+	public TextMeshProUGUI previewDescriptionText;
+
     void Start()
     {
         ShowMain();
@@ -64,32 +66,43 @@ public class MainMenuController : MonoBehaviour
         CloseAll();
         missionListPanel.SetActive(true);
 
+        // On vide le texte de description au début (pour pas afficher la desc de la mission d'avant)
+        if (previewDescriptionText != null) previewDescriptionText.text = "Sélectionnez une mission...";
+
         if (chapterTitleText != null) chapterTitleText.text = chapter.chapterName;
 
+        // Nettoyage des vieux boutons
         foreach (Transform child in missionContainer) Destroy(child.gameObject);
 
         foreach (var mission in chapter.missions)
         {
             GameObject btnObj = Instantiate(missionButtonPrefab, missionContainer);
 
-            // 1. Mise à jour du Texte
-            TextMeshProUGUI txt = btnObj.GetComponentInChildren<TextMeshProUGUI>();
-            if (txt != null) txt.text = mission.missionName;
+            // 1. Remplissage VISUEL (Via notre nouveau script MissionButtonUI)
+            MissionButtonUI uiScript = btnObj.GetComponent<MissionButtonUI>();
+            if (uiScript != null)
+            {
+                // On envoie "1-1" et "Le Marécage"
+                uiScript.SetInfo(mission.missionID, mission.missionName);
+            }
+            else
+            {
+                // Fallback si tu as oublié de mettre le script UI sur le prefab
+                TextMeshProUGUI txt = btnObj.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.text = mission.missionName; 
+            }
 
-            // 2. Configuration du Clic (Lancer le jeu)
+            // 2. Configuration du Clic
             Button btn = btnObj.GetComponent<Button>();
             btn.onClick.AddListener(() => LaunchMissionSetup(mission.sceneName));
 
-            // --- 3. CONFIGURATION DU PREVIEW (HOVER) ---
-            // On cherche le script qu'on vient de modifier
+            // 3. Configuration du HOVER (Hologramme + Description)
             MissionButtonHover hoverScript = btnObj.GetComponent<MissionButtonHover>();
-
-            // Si le script est présent sur le prefab, on lui envoie la MapDefinition
             if (hoverScript != null)
             {
-                hoverScript.Setup(mission.mapConfig);
+                // On lui passe : La Map, La Description, Et la référence vers le texte UI à changer
+                hoverScript.Setup(mission.mapConfig, mission.description, previewDescriptionText);
             }
-            // -------------------------------------------
         }
     }
 

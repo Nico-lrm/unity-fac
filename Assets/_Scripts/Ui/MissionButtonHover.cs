@@ -1,25 +1,35 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using TMPro; // Si tu veux gérer le texte ici aussi
+using TMPro;
 
 public class MissionButtonHover : MonoBehaviour, IPointerEnterHandler
 {
-    // Variable privée, remplie par le code
     private MapDefinition myMapData;
+    private string myDescription;
+    
+    // RÃ©fÃ©rence vers le texte de l'UI principale (qu'on va remplir via le controller)
+    private TextMeshProUGUI descriptionLabelRef; 
 
-    // Fonction d'initialisation (appelée par MainMenuController)
-    public void Setup(MapDefinition data)
+    // Nouvelle fonction Setup
+    public void Setup(MapDefinition mapData, string desc, TextMeshProUGUI descLabel)
     {
-        myMapData = data;
+        myMapData = mapData;
+        myDescription = desc;
+        descriptionLabelRef = descLabel;
     }
 
-    // Quand la souris passe dessus
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // On vérifie qu'on a bien les données et que le PreviewManager existe
+        // 1. Lancer l'Hologramme
         if (MapPreviewManager.Instance != null && myMapData != null)
         {
             MapPreviewManager.Instance.ShowMapPreview(myMapData);
+        }
+
+        // 2. Afficher la Description
+        if (descriptionLabelRef != null)
+        {
+            descriptionLabelRef.text = myDescription;
         }
     }
 }
