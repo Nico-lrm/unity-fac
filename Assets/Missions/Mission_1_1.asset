@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 975b9d34ccd7d524194dc3d91069ba90, type: 3}
+  m_Name: Mission_1_1
+  m_EditorClassIdentifier: Assembly-CSharp::MissionData
+  missionID: 1-1
+  missionName: "Le mar\xE9cage"
+  sceneName: Mission_1_1
+  mapConfig: {fileID: 11400000, guid: 2e8cd863005c6394bab37c6d56e79109, type: 2}
+  backgroundMusic: {fileID: 8300000, guid: 495509e350bbcbf4fa66b3d3a1147c17, type: 3}
+  ambienceSFX: {fileID: 0}
+  activeMechanic: {fileID: 11400000, guid: 6fa4182004f58d34eaa7e1b5f3a4f2d8, type: 2}
+  description: "Les mobs du mar\xE9cage"

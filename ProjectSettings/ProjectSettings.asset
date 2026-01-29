@@ -4,7 +4,7 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 28
-  productGUID: fd190ee83dc17222e849a8e61e8a5847
+  productGUID: 9a095e6aa537ef840b3faf4c02e658e9
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -12,8 +12,8 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: DefaultCompany
-  productName: Echec4X
+  companyName: CMOI
+  productName: Projet de cours
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -843,14 +843,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: Echec4X
+  metroPackageName: Projet de cours
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: Echec4X
+  metroApplicationDescription: Projet de cours
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -919,13 +919,13 @@ PlayerSettings:
   qnxGraphicConfPath: 
   apiCompatibilityLevel: 6
   captureStartupLogs: {}
-  activeInputHandler: 1
+  activeInputHandler: 2
   windowsGamepadBackendHint: 0
-  cloudProjectId: 9963a151-2aec-4d04-9493-82f291734ae1
+  cloudProjectId: 6b6bf30e-5790-409d-bb25-d2bfec1eef60
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: Echec4X
-  organizationId: nico_lrm
+  projectName: Projet de cours
+  organizationId: nokros
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
