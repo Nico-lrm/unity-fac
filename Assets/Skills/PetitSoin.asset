@@ -17,4 +17,10 @@ MonoBehaviour:
   range: 3
   power: 6
   isHeal: 1
+  isLeapAttack: 0
   description: Soigne les petit pd
+  animTrigger: DoAttack
+  castVFX: {fileID: 0}
+  castSound: {fileID: 0}
+  hitVFX: {fileID: 0}
+  castDelay: 0.5

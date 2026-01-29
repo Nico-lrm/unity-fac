@@ -10,7 +10,7 @@ public class MainMenuController : MonoBehaviour
     public GameObject mainPanel;
     public GameObject chaptersPanel;
     public GameObject optionsPanel;
-    public GameObject missionListPanel; // NOUVEAU
+    public GameObject missionListPanel;
 
     [Header("Mission List Components")]
     public TextMeshProUGUI chapterTitleText; // Pour afficher "Chapitre 1"
@@ -58,9 +58,8 @@ public class MainMenuController : MonoBehaviour
         missionListPanel.SetActive(false);
     }
 
-    // --- LOGIQUE CHAPITRE & MISSION (C'est ici que ça change) ---
+    // --- LOGIQUE CHAPITRE & MISSION  ---
 
-    // Cette fonction est appelée par le bouton "Chapitre 1"
     public void OpenChapter(ChapterData chapter)
     {
         CloseAll();
@@ -78,16 +77,13 @@ public class MainMenuController : MonoBehaviour
         {
             GameObject btnObj = Instantiate(missionButtonPrefab, missionContainer);
 
-            // 1. Remplissage VISUEL (Via notre nouveau script MissionButtonUI)
             MissionButtonUI uiScript = btnObj.GetComponent<MissionButtonUI>();
             if (uiScript != null)
             {
-                // On envoie "1-1" et "Le Marécage"
                 uiScript.SetInfo(mission.missionID, mission.missionName);
             }
             else
             {
-                // Fallback si tu as oublié de mettre le script UI sur le prefab
                 TextMeshProUGUI txt = btnObj.GetComponentInChildren<TextMeshProUGUI>();
                 if (txt != null) txt.text = mission.missionName; 
             }
@@ -100,7 +96,6 @@ public class MainMenuController : MonoBehaviour
             MissionButtonHover hoverScript = btnObj.GetComponent<MissionButtonHover>();
             if (hoverScript != null)
             {
-                // On lui passe : La Map, La Description, Et la référence vers le texte UI à changer
                 hoverScript.Setup(mission.mapConfig, mission.description, previewDescriptionText);
             }
         }

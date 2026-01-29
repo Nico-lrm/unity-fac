@@ -22,6 +22,8 @@ public class GameManager : MonoBehaviour
     public List<UnitController> playerTeam = new List<UnitController>();
     public List<UnitController> enemyTeam = new List<UnitController>();
 
+    public MissionData currentMission;
+
     private Queue<UnitController> turnQueue = new Queue<UnitController>();
     public UnitController activeUnit;
 
@@ -42,7 +44,14 @@ public class GameManager : MonoBehaviour
             allUnits.Add(unit);
             if (unit.isPlayerTeam) playerTeam.Add(unit); else enemyTeam.Add(unit);
         }
-
+        
+        if (AudioManager.Instance != null && currentMission != null)
+        {
+            AudioManager.Instance.PlayMissionAudio(currentMission);
+        }
+        
+        if (currentMission == null) Debug.LogError("ERREUR CRITIQUE : GameManager n'a pas de MissionData !");
+        else Debug.Log($"Lancement de la mission : {currentMission.missionName} / Musique : {currentMission.backgroundMusic?.name}");
         // 2. LANCEMENT DE LA SÉQUENCE D'INTRO
         StartCoroutine(IntroSequence());
     }
@@ -81,12 +90,10 @@ public class GameManager : MonoBehaviour
     {
         if (state == GameState.GameOver) return;
 
-        // --- AJOUT ICI : On nettoie l'unité précédente avant de changer ---
         if (activeUnit != null)
         {
             activeUnit.EndTurnLogic(); // Cache le cercle de celui qui vient de finir
         }
-        // ------------------------------------------------------------------
 
         if (turnQueue.Count == 0) RebuildTurnQueue();
         if (turnQueue.Count == 0) return;

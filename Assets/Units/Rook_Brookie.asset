@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3d26e1bfaa1f2f499705a10b54c7b06, type: 3}
+  m_Name: Rook_Brookie
+  m_EditorClassIdentifier: Assembly-CSharp::UnitData
+  unitName: Brookie
+  pieceType: 2
+  unitPrefab: {fileID: 667873957963335939, guid: 1c69b8678cf8a824e9825dddf896e2d3, type: 3}
+  icon: {fileID: 21300000, guid: 9d5f62511bd60314eafbbe6b6e932ef4, type: 3}
+  deploymentCost: 1
+  maxHP: 40
+  attackDamage: 4
+  speed: 3
+  minRange: 1
+  maxRange: 3
+  skills:
+  - {fileID: 11400000, guid: 3d53ad6c8aa315c4d8daae5121b63563, type: 2}
+  attackSound: {fileID: 8300000, guid: b99da9a57308d4ba1bee1cf1d9038376, type: 3}
+  hitVFX: {fileID: 5238538877814813142, guid: 47096eff328e11a418ace7db2d72aa97, type: 3}
+  attackAnimDelay: 0.3

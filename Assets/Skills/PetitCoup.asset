@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41248b2a8eff9984b8d3f8e6636ee9b5, type: 3}
+  m_Name: PetitCoup
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  skillName: Coup dur
+  apCost: 4
+  range: 1
+  power: 10
+  isHeal: 0
+  isLeapAttack: 0
+  description: Un coup moins OP
+  animTrigger: DoAttack
+  castVFX: {fileID: 0}
+  castSound: {fileID: 8300000, guid: ff5f85da24bc943d1abdc5760a22bc81, type: 3}
+  hitVFX: {fileID: 1835355836541019294, guid: 4790206eadc817b4196e071640e653af, type: 3}
+  castDelay: 0.5

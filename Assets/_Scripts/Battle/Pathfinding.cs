@@ -23,16 +23,12 @@ public class Pathfinding
                 // La hauteur (max 1 de différence)
                 if (Mathf.Abs(neighbor.height - current.height) > 1) continue;
 
-                // Est-ce marchable ?
                 if (!neighbor.isWalkable) continue;
 
-                // Est-ce occupé par une autre unité ?
                 if (neighbor.currentUnit != null && neighbor != startTile) continue;
 
-                // Calcul du coût (Coût actuel + coût de la case voisine)
                 int newCost = costSoFar[current] + neighbor.movementCost;
 
-                // Si on a assez de PA et que c'est le meilleur chemin trouvé
                 if (newCost <= currentAP)
                 {
                     if (!costSoFar.ContainsKey(neighbor) || newCost < costSoFar[neighbor])

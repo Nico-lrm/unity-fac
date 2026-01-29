@@ -30192,6 +30192,10 @@ PrefabInstance:
       value: GameManager
       objectReference: {fileID: 0}
     - target: {fileID: 6803677251710507893, guid: 801b6bb2330f5b640a9c637d265df385, type: 3}
+      propertyPath: currentMission
+      value: 
+      objectReference: {fileID: 11400000, guid: bdcbd9da8fd058247ac7f1490f7ea8c2, type: 2}
+    - target: {fileID: 6803677251710507893, guid: 801b6bb2330f5b640a9c637d265df385, type: 3}
       propertyPath: announcementText
       value: 
       objectReference: {fileID: 636248131}

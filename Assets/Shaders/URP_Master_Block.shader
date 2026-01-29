@@ -1,4 +1,4 @@
-Shader "Custom/URP_Master_Block"
+Shader "Custom/URP_Master_Block_Lit"
 {
     Properties
     {
@@ -14,23 +14,18 @@ Shader "Custom/URP_Master_Block"
         _RampThreshold("Shadow Threshold", Range(0, 1)) = 0.5
         _RampSmoothness("Shadow Softness", Range(0.001, 0.5)) = 0.01
 
-        // --- FEATURE 1 : RANDOMIZATION ---
-        [Header(Randomization Features)]
+        [Header(Randomization)]
         [Toggle] _UseRandomUV ("Enable Random Position/Zoom", Float) = 0
-        _TextureZoom ("Texture Zoom (Tiling)", Range(0.01, 2)) = 1.0
-        
-        [Toggle] _UseRandomTint ("Enable Random Color Tint", Float) = 0
-        _RandomStrength("Tint Variation Strength", Range(0, 0.2)) = 0.05
+        _TextureZoom ("Texture Zoom", Range(0.01, 2)) = 1.0
+        [Toggle] _UseRandomTint ("Enable Random Tint", Float) = 0
+        _RandomStrength("Tint Strength", Range(0, 0.2)) = 0.05
 
-        // --- FEATURE 2 : MAGMA / EMISSION ---
-        [Header(Emission Features)]
-        [Toggle] _UseEmission ("Enable Emission (Magma)", Float) = 0
-        [NoScaleOffset] _EmissionMap("Emission Mask (Black/White)", 2D) = "black" {}
-        [HDR] _EmissionColor("Emission Color (HDR)", Color) = (0,0,0,1)
+        [Header(Emission)]
+        [Toggle] _UseEmission ("Enable Emission", Float) = 0
+        [NoScaleOffset] _EmissionMap("Emission Mask", 2D) = "black" {}
+        [HDR] _EmissionColor("Emission Color", Color) = (0,0,0,1)
         _EmissionPower("Emission Power", Range(0, 10)) = 3.0
-        
-        [Header(Emission Pulse)]
-        [Toggle] _UsePulse ("Enable Pulsing", Float) = 0
+        [Toggle] _UsePulse ("Enable Pulse", Float) = 0
         _PulseSpeed("Pulse Speed", Range(0, 10)) = 2.0
         _PulseMin("Min Intensity", Range(0, 1)) = 0.5
         _PulseMax("Max Intensity", Range(1, 2)) = 1.5
@@ -40,12 +35,12 @@ Shader "Custom/URP_Master_Block"
     {
         Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
 
-        // --- PASSE 1 : CONTOUR (OUTLINE) ---
+        // --- PASSE 1 : OUTLINE (Inchangé) ---
         Pass
         {
             Name "Outline"
             Tags { "LightMode" = "SRPDefaultUnlit" }
-            Cull Front // On affiche l'intérieur du modèle gonflé
+            Cull Front
 
             HLSLPROGRAM
             #pragma vertex vert
@@ -56,9 +51,7 @@ Shader "Custom/URP_Master_Block"
             struct Varyings { float4 positionCS : SV_POSITION; };
 
             CBUFFER_START(UnityPerMaterial)
-                float4 _OutlineColor;
-                float _OutlineWidth;
-                // On déclare les autres variables pour éviter les erreurs, même si inutilisées ici
+                float4 _OutlineColor; float _OutlineWidth;
                 float4 _BaseMap_ST; float4 _BaseColor; float _RampThreshold; float _RampSmoothness;
                 float _UseRandomUV; float _TextureZoom; float _UseRandomTint; float _RandomStrength;
                 float _UseEmission; float4 _EmissionColor; float _EmissionPower;
@@ -72,12 +65,11 @@ Shader "Custom/URP_Master_Block"
                 output.positionCS = TransformObjectToHClip(newPos);
                 return output;
             }
-
             half4 frag(Varyings input) : SV_Target { return _OutlineColor; }
             ENDHLSL
         }
 
-        // --- PASSE 2 : RENDU PRINCIPAL (TOUT EN UN) ---
+        // --- PASSE 2 : LIT (CORRIGÉE) ---
         Pass
         {
             Name "MainObject"
@@ -87,11 +79,16 @@ Shader "Custom/URP_Master_Block"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            
-            // Nécessaire pour les ombres et la lumière
+
+            // --- PRAGMAS CRUCIAUX ---
+            // Ombres Main Light
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _SHADOWS_SOFT
+            
+            // Ombres Additional Lights (C'est ça qui active les SpotLights)
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -108,130 +105,115 @@ Shader "Custom/URP_Master_Block"
                 float4 positionCS : SV_POSITION; 
                 float3 normalWS : TEXCOORD0; 
                 float2 uv : TEXCOORD1; 
-                float3 positionWS : TEXCOORD2; // Pour le calcul aléatoire
-                float randomSeed : TEXCOORD3;  // Stocke la variation de couleur
+                float3 positionWS : TEXCOORD2; 
+                float randomSeed : TEXCOORD3;
+                float4 shadowCoord : TEXCOORD4; // <--- AJOUT CRUCIAL
             };
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             TEXTURE2D(_EmissionMap); SAMPLER(sampler_EmissionMap);
 
             CBUFFER_START(UnityPerMaterial)
-                float4 _BaseMap_ST;
-                float4 _BaseColor;
+                float4 _BaseMap_ST; float4 _BaseColor;
                 float4 _OutlineColor; float _OutlineWidth;
-                float _RampThreshold;
-                float _RampSmoothness;
-                // Random vars
-                float _UseRandomUV;
-                float _TextureZoom;
-                float _UseRandomTint;
-                float _RandomStrength;
-                // Emission vars
-                float _UseEmission;
-                float4 _EmissionColor;
-                float _EmissionPower;
-                float _UsePulse;
-                float _PulseSpeed;
-                float _PulseMin;
-                float _PulseMax;
+                float _RampThreshold; float _RampSmoothness;
+                float _UseRandomUV; float _TextureZoom; float _UseRandomTint; float _RandomStrength;
+                float _UseEmission; float4 _EmissionColor; float _EmissionPower;
+                float _UsePulse; float _PulseSpeed; float _PulseMin; float _PulseMax;
             CBUFFER_END
 
-            // Fonction aléatoire basée sur la position X/Z
+            // Fonction Random
             float GetRandomHash(float2 positionXZ)
             {
-                float2 noise = float2(
-                    dot(positionXZ, float2(12.9898, 78.233)),
-                    dot(positionXZ, float2(39.346, 11.135))
-                );
+                float2 noise = float2(dot(positionXZ, float2(12.9898, 78.233)), dot(positionXZ, float2(39.346, 11.135)));
                 return frac(sin(noise.x + noise.y) * 43758.5453);
+            }
+
+            // Fonction Helper Toon
+            float GetToonRamp(float NdotL)
+            {
+                return smoothstep(_RampThreshold - _RampSmoothness, _RampThreshold + _RampSmoothness, NdotL);
             }
 
             Varyings vert(Attributes input)
             {
                 Varyings output;
-                
-                // Position et Normale standard
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
-                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+
+                output.positionCS = vertexInput.positionCS;
+                output.positionWS = vertexInput.positionWS;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 
-                // --- LOGIQUE ALÉATOIRE ---
-                // On arrondit la position pour avoir une valeur unique par bloc (si placé sur la grille)
+                // CALCUL CORRECT DES OMBRES
+                output.shadowCoord = GetShadowCoord(vertexInput);
+
+                // Logique Random
                 float2 gridPos = floor(output.positionWS.xz);
                 float randomVal = GetRandomHash(gridPos);
 
-                // 1. Calcul UV (Zoom + Random Offset)
                 float2 finalUV = input.uv;
-                
-                if (_UseRandomUV > 0.5)
-                {
-                    // Zoom
-                    finalUV *= _TextureZoom;
-                    // Décalage aléatoire
-                    finalUV += float2(randomVal, randomVal * 0.5);
-                }
-                else 
-                {
-                    // Juste le tiling standard d'Unity si on n'utilise pas le random
-                    finalUV = TRANSFORM_TEX(input.uv, _BaseMap);
-                }
-                
+                if (_UseRandomUV > 0.5) { finalUV *= _TextureZoom; finalUV += float2(randomVal, randomVal * 0.5); }
+                else { finalUV = TRANSFORM_TEX(input.uv, _BaseMap); }
                 output.uv = finalUV;
 
-                // 2. Calcul Tint (Variation de couleur)
                 output.randomSeed = 1.0;
-                if (_UseRandomTint > 0.5)
-                {
-                    // On varie légèrement la luminosité entre (1 - strength) et (1 + strength)
-                    output.randomSeed = 1.0 + (randomVal * 2.0 - 1.0) * _RandomStrength;
-                }
+                if (_UseRandomTint > 0.5) { output.randomSeed = 1.0 + (randomVal * 2.0 - 1.0) * _RandomStrength; }
 
                 return output;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
-                // --- A. TEXTURE & COULEUR DE BASE ---
                 float4 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
-                
-                // On applique la couleur de base ET la variation aléatoire calculée dans le vertex
                 float3 albedo = texColor.rgb * _BaseColor.rgb * input.randomSeed;
 
-                // --- B. ÉCLAIRAGE TOON ---
-                Light mainLight = GetMainLight(TransformWorldToHClip(input.positionWS)); // Recup ombres
                 float3 normal = normalize(input.normalWS);
-                float3 lightDir = normalize(mainLight.direction);
                 
-                float NdotL = dot(normal, lightDir);
+                // --- 1. MAIN LIGHT ---
+                // Correction : On utilise shadowCoord, pas HClip !
+                Light mainLight = GetMainLight(input.shadowCoord);
                 
-                // Effet Toon (Ramp)
-                float toonRamp = smoothstep(_RampThreshold - _RampSmoothness, _RampThreshold + _RampSmoothness, NdotL);
+                float NdotL = dot(normal, mainLight.direction);
+                float mainRamp = GetToonRamp(NdotL);
+                mainRamp *= mainLight.shadowAttenuation; 
                 
-                // Ombres portées
-                float shadow = mainLight.shadowAttenuation;
-                toonRamp *= shadow;
+                float3 lightingColor = mainLight.color * mainRamp;
 
-                float3 finalLighting = albedo * (mainLight.color * toonRamp + unity_AmbientSky);
+                // --- 2. ADDITIONAL LIGHTS (Spot / Point) ---
+                uint pixelLightCount = GetAdditionalLightsCount();
+                for (uint i = 0; i < pixelLightCount; ++i)
+                {
+                    Light light = GetAdditionalLight(i, input.positionWS);
 
-                // --- C. ÉMISSION (MAGMA) ---
+                    float3 lightDir = light.direction;
+                    
+                    // On calcule l'angle de la lumière normalement
+                    float NdotL_Add = saturate(dot(normal, lightDir));
+                    
+                    // --- MODIFICATION ICI ---
+                    // Au lieu d'utiliser GetToonRamp(NdotL_Add), on utilise la lumière brute
+                    // Cela permet aux lampadaires d'avoir un dégradé doux et d'être visibles de loin
+                    
+                    float attenuation = light.distanceAttenuation * light.shadowAttenuation;
+                    
+                    // On ajoute la lumière directement (Mode Réaliste pour les lampes)
+                    lightingColor += light.color * NdotL_Add * attenuation;
+                }
+
+                lightingColor += unity_AmbientSky;
+                float3 finalColor = albedo * lightingColor;
+
+                // --- 3. EMISSION ---
                 float3 emission = float3(0,0,0);
-                
                 if (_UseEmission > 0.5)
                 {
                     float mask = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.uv).r;
-                    
                     float pulse = 1.0;
-                    if (_UsePulse > 0.5)
-                    {
-                        pulse = (sin(_Time.y * _PulseSpeed) * 0.5 + 0.5); // 0 à 1
-                        pulse = lerp(_PulseMin, _PulseMax, pulse);        // Min à Max
-                    }
-
+                    if (_UsePulse > 0.5) { pulse = lerp(_PulseMin, _PulseMax, (sin(_Time.y * _PulseSpeed) * 0.5 + 0.5)); }
                     emission = mask * _EmissionColor.rgb * _EmissionPower * pulse;
                 }
 
-                // --- D. COMBINAISON FINALE ---
-                return half4(finalLighting + emission, 1);
+                return half4(finalColor + emission, 1);
             }
             ENDHLSL
         }

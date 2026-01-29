@@ -72,7 +72,6 @@ public class UIManager : MonoBehaviour
             attackBtn.onClick.RemoveAllListeners();
             attackBtn.onClick.AddListener(() => {
                 currentUIUnit.EnterCombatMode(null); // Null = Attaque de base
-                // Pas de CloseAllMenus ici, c'est EnterCombatMode qui décidera
             });
 
             // 2. BOUTON SKILLS (Oouvre le sous-menu)
@@ -110,8 +109,6 @@ public class UIManager : MonoBehaviour
 
         // 1. Image & Nom
         nameText.text = unit.unitName;
-        // Si tu as une image dans ton panel, mets-la ici :
-        // if(portraitImg != null) portraitImg.sprite = unit.data.icon;
 
         // 2. PV (Mise à jour dynamique)
         hpText.text = $"HP: {unit.currentHP} / {unit.maxHP}";
@@ -163,8 +160,6 @@ public class UIManager : MonoBehaviour
             });
         }
         
-        // Ajoute un bouton "Retour" optionnel si tu veux, 
-        // ou gère le clic droit pour fermer.
     }
 
     public void CloseAllMenus()
@@ -193,8 +188,6 @@ public class UIManager : MonoBehaviour
     {
         if (hoveredUnit == null)
         {
-            // Si on ne survole rien, on cache le panneau cible
-            // OU on peut laisser le panneau afficher la dernière action
             targetPanel.SetActive(false);
             return;
         }
@@ -203,7 +196,6 @@ public class UIManager : MonoBehaviour
         targetNameText.text = hoveredUnit.unitName;
         targetHPText.text = $"{hoveredUnit.currentHP} / {hoveredUnit.maxHP} PV";
 
-        // Change la couleur du nom selon l'équipe
         targetNameText.color = hoveredUnit.isPlayerTeam ? Color.cyan : Color.red;
     }
 
@@ -224,8 +216,6 @@ public class UIManager : MonoBehaviour
             Destroy(logContainer.GetChild(0).gameObject);
         }
 
-        // 3. AUTO-SCROLL VERS LE BAS (L'effet Dofus)
-        // On le fait via une Coroutine pour attendre que l'UI se dessine
         StartCoroutine(ScrollToBottom());
     }
 

@@ -23,15 +23,11 @@ public class TurnBarUI : MonoBehaviour
         {
             GameObject obj = Instantiate(portraitPrefab, barContainer);
             
-            // ÉTAT 1 : C'est le personnage qui joue MAINTENANT
             bool isActive = (unit == GameManager.Instance.activeUnit);
 
-            // ÉTAT 2 : A-t-il fini son tour ?
-            // Il a fini SI : Il n'est pas actif ET Il n'est plus dans la file d'attente
             bool isWaiting = GameManager.Instance.IsUnitInQueue(unit);
             bool isDone = !isActive && !isWaiting;
 
-            // On configure le portrait
             obj.GetComponent<TurnPortrait>().Setup(unit, isActive, isDone);
         }
     }

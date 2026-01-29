@@ -11,7 +11,7 @@ public class UnitButtonSlot : MonoBehaviour
     [Header("Portrait Structure")]
     public Image portraitImage;   // L'image du perso (Enfant du Mask)
     public Image backgroundImage; // Le fond coloré (Indique la SÉLECTION)
-    public Image borderImage;     // La bordure (Indique l'ÉQUIPE) - NOUVEAU
+    public Image borderImage;     // La bordure (Indique l'ÉQUIPE)
 
     [Header("Selection Logic")]
     public Button myButton;
@@ -32,7 +32,6 @@ public class UnitButtonSlot : MonoBehaviour
 
         // 1. Remplissage des Textes
         if (nameText != null) nameText.text = data.unitName;
-        // if (costText != null) costText.text = data.deploymentCost.ToString(); 
 
         // 2. Remplissage de l'Image
         if (portraitImage != null && data.icon != null)

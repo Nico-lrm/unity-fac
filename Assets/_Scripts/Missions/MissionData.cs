@@ -8,6 +8,13 @@ public class MissionData : ScriptableObject
     public string sceneName;   // Ex: "Mission_1_1"
 
     public MapDefinition mapConfig;
+    
+    [Header("Audio d'Ambiance")]
+    public AudioClip backgroundMusic;
+    public AudioClip ambienceSFX;
+    
+    [Header("Règle Spéciale")]
+    public MissionMechanic activeMechanic;
 
     [TextArea] public string description; // Ex: "Tuez le Roi ennemi."
 }

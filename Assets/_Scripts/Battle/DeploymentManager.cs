@@ -9,11 +9,10 @@ public class DeploymentManager : MonoBehaviour
     [Header("Données")]
     public UnitDatabase unitDB; 
 
-    // --- NOUVEAU : STRUCTURE DE CATÉGORIE ---
     [System.Serializable]
     public class DeploymentCategory
     {
-        public string name;          // Nom pour t'aider dans l'inspecteur (ex: "Rois")
+        public string name;          // Nom pour aider dans l'inspecteur (ex: "Rois")
         public ChessType type;       // Le type d'unité lié (King, Queen...)
         public Transform container;  // La ligne (Horizontal Layout) où mettre les boutons
     }
@@ -60,7 +59,6 @@ public class DeploymentManager : MonoBehaviour
             UnitData data = unit; 
             if (data == null) continue;
 
-            // --- NOUVEAU : TROUVER LA BONNE CATÉGORIE ---
             // On cherche dans notre liste la catégorie qui correspond au type de l'unité
             DeploymentCategory targetCat = categories.Find(c => c.type == data.pieceType);
 
@@ -83,12 +81,12 @@ public class DeploymentManager : MonoBehaviour
 
     public void OnUnitClicked(UnitData data)
     {
-        // Si déjà dans l'équipe -> On retire
+        // Si déjà dans l'équipe On retire
         if (myTeam.Contains(data))
         {
             RemoveUnit(data);
         }
-        // Sinon -> On essaie d'ajouter
+        // Sinon On essaie d'ajouter
         else
         {
             TryAddUnit(data);

@@ -3,7 +3,7 @@ using TMPro; // Nécessaire pour TextMeshPro
 
 public class DamagePopup : MonoBehaviour
 {
-    private TextMeshPro textMesh; // On utilise TextMeshPro 3D (pas UI)
+    private TextMeshPro textMesh; 
     private float disappearTimer;
     private Color textColor;
     private Vector3 moveVector;
@@ -15,7 +15,6 @@ public class DamagePopup : MonoBehaviour
     void Awake()
     {
         textMesh = GetComponent<TextMeshPro>();
-        // Si tu utilises le composant UI (TextMeshProUGUI), change le type ci-dessus
         if (textMesh == null) textMesh = GetComponentInChildren<TextMeshPro>();
     }
 
@@ -84,11 +83,6 @@ public class DamagePopup : MonoBehaviour
         {
             // Le texte se tourne pour avoir la même rotation que la caméra
             transform.rotation = Camera.main.transform.rotation;
-
-            // OPTIONNEL : Si tu veux que le texte garde la même taille à l'écran même de loin
-            // Décommente les deux lignes ci-dessous :
-            // float distance = Vector3.Distance(transform.position, Camera.main.transform.position);
-            // transform.localScale = Vector3.one * (distance * 0.1f); // Ajuste 0.1f selon tes goûts
         }
     }
 }

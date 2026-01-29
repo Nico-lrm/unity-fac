@@ -17,4 +17,9 @@ MonoBehaviour:
   range: 2
   power: 15
   isHeal: 0
+  isLeapAttack: 0
   description: "Un coup de bais\xE9"
+  castVFX: {fileID: 0}
+  castSound: {fileID: 8300000, guid: ff5f85da24bc943d1abdc5760a22bc81, type: 3}
+  hitVFX: {fileID: 8762405910555896786, guid: fcb74f28d107e284e80af037bfec14ca, type: 3}
+  castDelay: 0.5

@@ -16,4 +16,7 @@ MonoBehaviour:
   missionName: Le volcan
   sceneName: Mission_1_2
   mapConfig: {fileID: 11400000, guid: 16e027ddaaa6b8447b45bb5bd453f2c1, type: 2}
+  backgroundMusic: {fileID: 8300000, guid: f2669d70bab3a194ba572b8f3da0ac19, type: 3}
+  ambienceSFX: {fileID: 0}
+  activeMechanic: {fileID: 11400000, guid: 35d974a71b7ad44439bab3b7dae5b81c, type: 2}
   description: "Mission avec les mutants l\xE0 bof"

@@ -34,7 +34,7 @@ public class UnitController : MonoBehaviour
 
 	[Header("Visuel & Animation")]
     public Transform damagePopupPrefab;
-    public Transform firePoint; // <--- AJOUT IMPORTANT : LE BOUT DU FUSIL
+    public Transform firePoint;
     public float rotationSpeed = 10f;
     private Animator anim;
 
@@ -88,7 +88,6 @@ public class UnitController : MonoBehaviour
         }
         currentAP = maxAP;
 
-        // --- NOUVEAU : GESTION DE LA COULEUR D'ÉQUIPE ---
         UpdateTeamColor();
     }
 
@@ -102,7 +101,6 @@ public class UnitController : MonoBehaviour
             Color teamColor = isPlayerTeam ? Color.cyan : new Color(1f, 0.2f, 0.2f); // Rouge un peu orangé
             
             // On applique la couleur au paramètre "_RimColor" du shader
-            // Note: On utilise material (et pas sharedMaterial) pour créer une instance unique pour ce perso
             r.material.SetColor("_RimColor", teamColor);
         }
     }
@@ -145,11 +143,10 @@ public class UnitController : MonoBehaviour
                 {
                     if (clickedUnit != null)
                     {
-                        // --- CALCUL DE DISTANCE (MANHATTAN) ---
+                        // --- CALCUL DE DISTANCE ---
                         int distX = Mathf.Abs((int)clickedUnit.gridPosition.x - (int)gridPosition.x);
                         int distY = Mathf.Abs((int)clickedUnit.gridPosition.y - (int)gridPosition.y);
                         int distInt = distX + distY; 
-                        // --------------------------------------
 
                         if (distInt >= GetMinRange() && distInt <= GetMaxRange())
                         {
@@ -233,7 +230,7 @@ public class UnitController : MonoBehaviour
             TileData tile = kvp.Value;
             Vector2 tilePos = tile.gridPosition;
 
-            // --- CALCUL DE DISTANCE (MANHATTAN pour affichage Losange/Cercle) ---
+            // --- CALCUL DE DISTANCE ---
             int distX = Mathf.Abs((int)tilePos.x - (int)gridPosition.x);
             int distY = Mathf.Abs((int)tilePos.y - (int)gridPosition.y);
             int distanceEnCases = distX + distY;
@@ -264,7 +261,27 @@ public class UnitController : MonoBehaviour
 
    IEnumerator CombatSequence(UnitController target, SkillData skillUsed)
     {
-        // 1. Rotation vers la cible
+        if (skillUsed != null && skillUsed.isLeapAttack)
+        {
+            TileData jumpDest = GetFreeTileNextTo(target);
+
+            if (jumpDest != null)
+            {
+                if (UIManager.Instance != null) UIManager.Instance.ShowAnnouncement("Saut !", Color.cyan, 0.5f);
+
+                if (MapGenerator.mapGrid.ContainsKey(gridPosition)) 
+                    MapGenerator.mapGrid[gridPosition].currentUnit = null;
+
+                yield return StartCoroutine(JumpAnimation(transform.position, jumpDest.transform.position + Vector3.up * 0.5f, 0.6f));
+
+                gridPosition = jumpDest.gridPosition;
+                jumpDest.currentUnit = this;
+            }
+            else
+            {
+                if (UIManager.Instance != null) UIManager.Instance.AddToLog("Pas de place pour atterrir !");
+            }
+        }
         Vector3 targetDir = target.transform.position;
         float turnTime = 0f;
         while(turnTime < 0.2f) { LookAtTarget(targetDir); turnTime += Time.deltaTime; yield return null; }
@@ -278,17 +295,15 @@ public class UnitController : MonoBehaviour
         }
 
         // 2. LANCER L'ANIMATION
-        if (anim != null) anim.SetTrigger("DoAttack");
-
-        // --- C'EST ICI QUE LA MAGIE OPÈRE ---
+        string animTrigger = (skillUsed != null && !string.IsNullOrEmpty(skillUsed.animTrigger)) ? skillUsed.animTrigger : "DoAttack";
+        if (anim != null) anim.SetTrigger(animTrigger);
         // On calcule combien de temps on doit attendre pour que l'anim soit au bon moment
         float delay = (skillUsed != null) ? skillUsed.castDelay : (data != null ? data.attackAnimDelay : 0.3f);
         
         // On attend que le bras soit levé / l'épée soit en bas
         yield return new WaitForSeconds(delay);
-        // ------------------------------------
 
-        // 3. SON & VFX (Le Laser part MAINTENANT, synchro avec l'anim)
+        // 3. SON & VFX 
         AudioClip clipToPlay = (skillUsed != null) ? skillUsed.castSound : (data != null ? data.attackSound : null);
         if (AudioManager.Instance != null && clipToPlay != null) AudioManager.Instance.PlaySFX(clipToPlay);
 
@@ -306,7 +321,6 @@ public class UnitController : MonoBehaviour
         }
 
         // 4. PETIT DÉLAI DE VOL (Pour que le laser ait le temps d'arriver)
-        // Si c'est un laser instantané, 0.1s suffit. Si c'est une boule de feu, il faut plus.
         yield return new WaitForSeconds(0.1f); 
         
         // 5. IMPACT & DÉGÂTS
@@ -329,7 +343,19 @@ public class UnitController : MonoBehaviour
         }
 
         if (isHeal) target.Heal(power);
-        else target.TakeDamage(power);
+        else
+        {
+            target.TakeDamage(power);
+            
+            if (GameManager.Instance != null && GameManager.Instance.currentMission != null)
+            {
+                var mechanic = GameManager.Instance.currentMission.activeMechanic;
+                if (mechanic != null)
+                {
+                    mechanic.OnAttackHit(this, target);
+                }
+            }
+        }
         
         // On laisse le temps à l'anim de finir tranquillement
         yield return new WaitForSeconds(0.5f);
@@ -512,6 +538,15 @@ public class UnitController : MonoBehaviour
     {
         currentAP = maxAP;
         hasMovedThisTurn = false;
+        
+        if (GameManager.Instance != null && GameManager.Instance.currentMission != null)
+        {
+            var mechanic = GameManager.Instance.currentMission.activeMechanic;
+            if (mechanic != null)
+            {
+                mechanic.OnTurnStart(this);
+            }
+        }
 
         if (myIndicatorInstance != null) myIndicatorInstance.SetActive(true);
 
@@ -554,6 +589,65 @@ public class UnitController : MonoBehaviour
                 }
             }
         }
+    }
+    
+    public void ForceMoveTo(TileData targetTile)
+    {
+        if (MapGenerator.mapGrid.ContainsKey(gridPosition))
+            MapGenerator.mapGrid[gridPosition].currentUnit = null;
+
+        gridPosition = targetTile.gridPosition;
+        targetTile.currentUnit = this;
+
+        transform.position = new Vector3(targetTile.gridPosition.x, targetTile.height + 0.5f, targetTile.gridPosition.y);
+        
+        if (UIManager.Instance != null) UIManager.Instance.AddToLog($"{unitName} est repoussé !");
+    }
+    
+    TileData GetFreeTileNextTo(UnitController target)
+    {
+        Vector2[] offsets = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
+        
+        TileData bestTile = null;
+        float minDistance = 999f;
+
+        foreach (Vector2 off in offsets)
+        {
+            Vector2 checkPos = target.gridPosition + off;
+            
+            if (MapGenerator.mapGrid.ContainsKey(checkPos))
+            {
+                TileData t = MapGenerator.mapGrid[checkPos];
+                if (t.isWalkable && (t.currentUnit == null || t.currentUnit == this))
+                {
+                    float dist = Vector2.Distance(transform.position, t.transform.position);
+                    if (dist < minDistance)
+                    {
+                        minDistance = dist;
+                        bestTile = t;
+                    }
+                }
+            }
+        }
+        return bestTile;
+    }
+
+    IEnumerator JumpAnimation(Vector3 startPos, Vector3 endPos, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+
+            Vector3 currentPos = Vector3.Lerp(startPos, endPos, t);
+            
+            currentPos.y += Mathf.Sin(t * Mathf.PI) * 2.0f; 
+
+            transform.position = currentPos;
+            yield return null;
+        }
+        transform.position = endPos;
     }
 
     public void EndTurnLogic() 

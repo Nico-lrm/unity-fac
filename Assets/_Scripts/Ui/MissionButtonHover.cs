@@ -10,7 +10,7 @@ public class MissionButtonHover : MonoBehaviour, IPointerEnterHandler
     // Référence vers le texte de l'UI principale (qu'on va remplir via le controller)
     private TextMeshProUGUI descriptionLabelRef; 
 
-    // Nouvelle fonction Setup
+    // fonction Setup
     public void Setup(MapDefinition mapData, string desc, TextMeshProUGUI descLabel)
     {
         myMapData = mapData;

@@ -5,11 +5,11 @@ public class CameraFollow : MonoBehaviour
     public static CameraFollow Instance; // Singleton pour être appelé facilement
 
     [Header("Cible & Suivi")]
-    public bool isLockedOnUnit = true; // Est-ce qu'on suit le perso ?
+    public bool isLockedOnUnit = true;
     public float smoothSpeed = 5f;
 
     [Header("Positionnement")]
-    public Vector3 offset; // Ton offset actuel
+    public Vector3 offset;
     private Vector3 focusPosition; // Le point invisible que la caméra regarde (soit le perso, soit le sol)
 
     [Header("Contrôles Manuel")]
@@ -59,10 +59,6 @@ public class CameraFollow : MonoBehaviour
         {
             isLockedOnUnit = false; 
 
-            // --- CORRECTION MATHÉMATIQUE ---
-            // Au lieu de prendre le forward de la caméra (qui peut bugger si on regarde en bas),
-            // On prend le Forward du MONDE, et on le tourne selon l'angle Y de la caméra.
-            // C'est infaillible.
             Vector3 camEuler = transform.rotation.eulerAngles;
             Quaternion flatRotation = Quaternion.Euler(0, camEuler.y, 0);
 
@@ -101,7 +97,6 @@ public class CameraFollow : MonoBehaviour
     void LateUpdate()
     {
         // 1. Déterminer le point à regarder
-        // Si on est verrouillé, le point focus devient la position du héros
         if (isLockedOnUnit && GameManager.Instance != null && GameManager.Instance.activeUnit != null)
         {
             focusPosition = GameManager.Instance.activeUnit.transform.position;

@@ -41,7 +41,6 @@ public class TurnPortrait : MonoBehaviour
 
     void UpdateVisuals(UnitController unit, bool isActive, bool isDone)
     {
-        // --- GESTION DE LA BORDURE (L'Équipe) ---
         if (borderImage != null)
         {
             if (unit.isPlayerTeam)
@@ -50,7 +49,6 @@ public class TurnPortrait : MonoBehaviour
                 borderImage.color = enemyTeamColor;  // Rouge
         }
 
-        // --- GESTION DU FOND (L'État) ---
         if (backgroundImage != null)
         {
             if (isActive)
@@ -74,7 +72,7 @@ public class TurnPortrait : MonoBehaviour
         }
     }
 
-    // --- CLIC (Inchangé) ---
+    // --- CLIC ---
     public void OnClick()
     {
         if (linkedUnit == null) return;

@@ -22,7 +22,8 @@ MonoBehaviour:
   speed: 8
   minRange: 1
   maxRange: 1
-  skills: []
+  skills:
+  - {fileID: 11400000, guid: f64bdd26a838adf498a7de95ed9f109e, type: 2}
   attackSound: {fileID: 8300000, guid: 7bef0064f8567430cac22499c6b93d4f, type: 3}
   hitVFX: {fileID: 7856939199014537196, guid: 212ef1a41838ce044a9ac54994866708, type: 3}
   attackAnimDelay: 0.3

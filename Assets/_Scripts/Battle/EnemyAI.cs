@@ -25,6 +25,65 @@ public class EnemyAI : MonoBehaviour
 
         yield return new WaitForSeconds(0.8f); 
 
+        // 1. MÉCANIQUE DE MISSION
+        if (GameManager.Instance != null && GameManager.Instance.currentMission != null)
+        {
+            var mechanic = GameManager.Instance.currentMission.activeMechanic;
+            UnitController potentialTarget = FindClosestPlayerInGrid(); 
+            
+            if (mechanic != null && potentialTarget != null && mechanic.OverrideEnemyAI(myUnit, potentialTarget))
+            {
+                yield return new WaitForSeconds(1.0f);
+                EndAITurn();
+                yield break; 
+            }
+        }
+
+        SkillData healSkill = GetBestHealSkill();
+        UnitController woundedAlly = FindMostWoundedAlly();
+
+        // Si j'ai un sort de soin, assez d'AP, et quelqu'un à soigner
+        if (healSkill != null && woundedAlly != null && myUnit.currentAP >= healSkill.apCost)
+        {
+            int distToAlly = GetGridDistance(myUnit.gridPosition, woundedAlly.gridPosition);
+
+            // Cas A : Je peux soigner sans bouger
+            if (distToAlly <= healSkill.range)
+            {
+                myUnit.EnterCombatMode(healSkill);
+                myUnit.PerformCombatAction(woundedAlly);
+                
+                yield return new WaitForSeconds(1.0f);
+                EndAITurn();
+                yield break; // On arrête le tour ici
+            }
+            // Cas B : Je dois bouger pour soigner
+            else
+            {
+                myUnit.CalculateChessMoves();
+                TileData healPos = FindBestTileToHealFrom(woundedAlly, healSkill.range);
+
+                if (healPos != null)
+                {
+                    yield return StartCoroutine(myUnit.MoveChessPiece(healPos));
+                    yield return new WaitForSeconds(0.5f);
+
+                    // Vérification finale après mouvement
+                    if (GetGridDistance(myUnit.gridPosition, woundedAlly.gridPosition) <= healSkill.range)
+                    {
+                        myUnit.EnterCombatMode(healSkill);
+                        myUnit.PerformCombatAction(woundedAlly);
+                    }
+                    
+                    yield return new WaitForSeconds(1.0f);
+                    EndAITurn();
+                    yield break; // On arrête le tour ici
+                }
+            }
+        }
+
+
+        // 3. LOGIQUE D'ATTAQUE (Classique)
         UnitController target = FindClosestPlayerInGrid();
 
         if (target != null)
@@ -59,6 +118,48 @@ public class EnemyAI : MonoBehaviour
         EndAITurn();
     }
 
+    SkillData GetBestHealSkill()
+    {
+        // On cherche le skill de soin le plus puissant (Power) que l'unité possède
+        return myUnit.data.skills
+            .Where(s => s.isHeal && myUnit.currentAP >= s.apCost)
+            .OrderByDescending(s => s.power)
+            .FirstOrDefault();
+    }
+
+    UnitController FindMostWoundedAlly()
+    {
+        // On cherche toutes les unités vivantes de MA propre équipe (pas les joueurs)
+        var allies = GameManager.Instance.allUnits
+            .Where(u => !u.isPlayerTeam && u.currentHP > 0 && u.currentHP < u.data.maxHP)
+            .ToList();
+
+        if (allies.Count == 0) return null;
+
+        // On trie par pourcentage de vie (on soigne le plus critique d'abord)
+        return allies.OrderBy(a => (float)a.currentHP / (float)a.data.maxHP).First();
+    }
+
+    TileData FindBestTileToHealFrom(UnitController allyToHeal, int skillRange)
+    {
+        // On cherche une case accessible d'où on peut toucher l'allié
+        foreach (var kvp in myUnit.validMoveTiles) 
+        {
+            TileData tile = kvp.Key;
+            int moveCost = kvp.Value;
+            int remainingAP = myUnit.currentAP - moveCost;
+
+            int distToAlly = GetGridDistance(tile.gridPosition, allyToHeal.gridPosition);
+
+            // Il faut qu'il reste assez d'AP pour lancer le sort
+            if (remainingAP >= 3 && distToAlly <= skillRange)
+            {
+                return tile; 
+            }
+        }
+        return null;
+    }
+
 
 
     bool TryBestAttackAction(UnitController target)
@@ -71,7 +172,7 @@ public class EnemyAI : MonoBehaviour
 
         foreach (var skill in myUnit.data.skills)
         {
-            if (skill.isHeal) continue; 
+            if (skill.isHeal) continue; // On ignore les soins ici car gérés avant
 
             if (dist <= skill.range && myUnit.currentAP >= skill.apCost)
             {

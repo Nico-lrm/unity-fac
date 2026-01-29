@@ -15,5 +15,8 @@ MonoBehaviour:
   missionID: 1-3
   missionName: Les ruines
   sceneName: Mission_1_3
-  mapConfig: {fileID: 0}
+  mapConfig: {fileID: 11400000, guid: 353960b874a1d5447b2c14446573aa5d, type: 2}
+  backgroundMusic: {fileID: 8300000, guid: 7d70f590dda74e94894cab227d311317, type: 3}
+  ambienceSFX: {fileID: 0}
+  activeMechanic: {fileID: 0}
   description: Les robots toilettes ptn enfin
